@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import SiteLogo from '@/app/components/SiteLogo'
 
 const kDevPlayerId = '00000000-0000-0000-0000-000000000002'
 
@@ -127,8 +128,8 @@ export default function DashboardPage() {
   return (
     <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
       <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/" className="text-2xl font-bold tracking-widest text-[var(--sl-accent)]" style={{ fontFamily: 'Georgia, serif' }}>
-          SQUASH LIFE
+        <Link href="/">
+          <SiteLogo />
         </Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />

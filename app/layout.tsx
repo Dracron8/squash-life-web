@@ -25,15 +25,22 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      data-theme="dark"
+      data-theme="light"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <head>
         {/* Runs synchronously before paint to avoid flash of wrong theme */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('theme')||'dark';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
+            __html: `(function(){try{var t=localStorage.getItem('theme')||'light';document.documentElement.setAttribute('data-theme',t);}catch(e){}})();`,
           }}
+        />
+        {/* SQSH.LIFE brand font — Assistant */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap"
+          rel="stylesheet"
         />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>

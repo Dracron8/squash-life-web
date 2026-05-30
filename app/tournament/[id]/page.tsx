@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import SiteLogo from '@/app/components/SiteLogo'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -166,8 +167,8 @@ export default async function TournamentPage({ params }: Props) {
 
       {/* ── Nav ── */}
       <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/" className="text-2xl font-bold tracking-widest text-[var(--sl-accent)]" style={{ fontFamily: 'Georgia, serif' }}>
-          SQUASH LIFE
+        <Link href="/">
+          <SiteLogo />
         </Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />

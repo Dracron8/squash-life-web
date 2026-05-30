@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import SiteLogo from '@/app/components/SiteLogo'
 
 // ── Division helpers ────────────────────────────────────────────────────────
 
@@ -177,8 +178,8 @@ export default function RegisterPage() {
     <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
       {/* Header */}
       <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/" className="text-2xl font-bold tracking-widest text-[var(--sl-accent)]" style={{ fontFamily: 'Georgia, serif' }}>
-          SQUASH LIFE
+        <Link href="/">
+          <SiteLogo />
         </Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />

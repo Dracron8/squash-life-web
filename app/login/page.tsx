@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import SiteLogo from '@/app/components/SiteLogo'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -72,12 +73,9 @@ export default function LoginPage() {
 
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
-          <h1
-            className="text-4xl font-bold tracking-widest text-[var(--sl-accent)] mb-2"
-            style={{ fontFamily: 'Georgia, serif' }}
-          >
-            SQUASH LIFE
-          </h1>
+          <div className="flex justify-center mb-2">
+            <SiteLogo size="hero" />
+          </div>
           <p className="text-[var(--sl-text-30)] text-sm tracking-widest">PLAYER PORTAL</p>
         </div>
 

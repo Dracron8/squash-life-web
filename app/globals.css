@@ -37,14 +37,14 @@
   --sl-progress-track: rgba(255, 255, 255, 0.05);
 }
 
-/* ── Light theme ────────────────────────────────────────────────────────── */
+/* ── Light theme — official SQSH.LIFE branding ──────────────────────────── */
 [data-theme="light"] {
   --sl-bg: #ffffff;
-  --sl-surface: #f5f5f5;
-  --sl-surface-deep: #ebebeb;
-  --sl-surface-hover: #eeeeee;
-  --sl-text: #1a1a1a;
-  --sl-text-80: #333333;
+  --sl-surface: #f3f3f3;
+  --sl-surface-deep: #e8e8e8;
+  --sl-surface-hover: #ebebeb;
+  --sl-text: #121212;
+  --sl-text-80: #2a2a2a;
   --sl-text-60: #555555;
   --sl-text-50: #777777;
   --sl-text-40: #888888;
@@ -52,16 +52,16 @@
   --sl-text-25: #bbbbbb;
   --sl-text-20: #cccccc;
   --sl-text-10: #e0e0e0;
-  --sl-accent: #c41e3a;
-  --sl-accent-hover: #a01830;
-  --sl-accent-80: rgba(196, 30, 58, 0.8);
-  --sl-accent-60: rgba(196, 30, 58, 0.7);
-  --sl-accent-40: rgba(196, 30, 58, 0.5);
-  --sl-accent-30: rgba(196, 30, 58, 0.35);
-  --sl-accent-20: rgba(196, 30, 58, 0.2);
-  --sl-accent-15: rgba(196, 30, 58, 0.15);
-  --sl-accent-10: rgba(196, 30, 58, 0.08);
-  --sl-accent-05: rgba(196, 30, 58, 0.04);
+  --sl-accent: #fa0000;
+  --sl-accent-hover: #cc0000;
+  --sl-accent-80: rgba(250, 0, 0, 0.8);
+  --sl-accent-60: rgba(250, 0, 0, 0.65);
+  --sl-accent-40: rgba(250, 0, 0, 0.45);
+  --sl-accent-30: rgba(250, 0, 0, 0.3);
+  --sl-accent-20: rgba(250, 0, 0, 0.18);
+  --sl-accent-15: rgba(250, 0, 0, 0.12);
+  --sl-accent-10: rgba(250, 0, 0, 0.07);
+  --sl-accent-05: rgba(250, 0, 0, 0.04);
   --sl-border: #e0e0e0;
   --sl-border-faint: #f0f0f0;
   --sl-btn-text: #ffffff;
@@ -75,6 +75,20 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+/* Light theme uses Assistant font (SQSH.LIFE brand) */
+[data-theme="light"] body,
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4,
+[data-theme="light"] h5,
+[data-theme="light"] h6,
+[data-theme="light"] button,
+[data-theme="light"] input,
+[data-theme="light"] label {
+  font-family: 'Assistant', sans-serif;
+}
+
 /* Inputs / placeholders inherit theme */
 input::placeholder,
 textarea::placeholder {
@@ -85,3 +99,10 @@ input[type="radio"],
 input[type="checkbox"] {
   accent-color: var(--sl-accent);
 }
+
+/* ── Logo: text in dark, image in light ─────────────────────────────────── */
+.sl-logo-text { display: inline; }
+.sl-logo-img  { display: none; }
+
+[data-theme="light"] .sl-logo-text { display: none; }
+[data-theme="light"] .sl-logo-img  { display: inline-block; vertical-align: middle; }
