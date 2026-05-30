@@ -29,7 +29,7 @@ export default function SiteLogo({ size = 'nav' }: Props) {
         className={`sl-logo-text ${textCls} text-[var(--sl-accent)]`}
         style={{ fontFamily: 'Georgia, serif' }}
       >
-        SQUASH LIFE
+        SQSH.LIFE
       </span>
 
       {/* Light mode: official SQSH.LIFE logo image */}

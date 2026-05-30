@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Squash Life",
+  title: "SQSH.LIFE",
   description: "Tournament registration and player portal",
 };
 

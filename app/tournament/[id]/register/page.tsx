@@ -397,7 +397,7 @@ export default function RegisterPage() {
               </div>
               <div>
                 <span className="text-sm text-[var(--sl-text-60)]">Save my info for future tournaments</span>
-                <p className="text-[var(--sl-text-30)] text-xs mt-0.5">Creates a Squash Life account linked to your email</p>
+                <p className="text-[var(--sl-text-30)] text-xs mt-0.5">Creates a SQSH.LIFE account linked to your email</p>
               </div>
             </label>
 
