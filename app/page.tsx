@@ -95,7 +95,7 @@ export default async function Home() {
                             : 'bg-white/5 text-white/40 border border-white/10'
                         }`}
                       >
-                        {t.status.toUpperCase()}
+                        {t.status === 'registration_open' ? 'OPEN' : t.status.toUpperCase()}
                       </span>
                     </div>
                   </div>

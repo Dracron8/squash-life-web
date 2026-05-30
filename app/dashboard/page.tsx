@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [isDevMode, setIsDevMode] = useState(false)
   const [player, setPlayer] = useState<Player | null>(null)
+  const [authName, setAuthName] = useState<string | null>(null)
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
   const [registrations, setRegistrations] = useState<Registration[]>([])
 
@@ -91,6 +92,7 @@ export default function DashboardPage() {
         return
       }
 
+      setAuthName(user.user_metadata?.full_name ?? user.email ?? null)
       await fetchData(user.id)
       setLoading(false)
     }
@@ -111,7 +113,7 @@ export default function DashboardPage() {
 
   const displayName = player
     ? `${player.first_name} ${player.last_name}`
-    : 'Player'
+    : (authName ?? 'Player')
 
   if (loading) {
     return (
