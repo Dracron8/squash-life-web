@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import ThemeToggle from '@/app/components/ThemeToggle'
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false)
@@ -60,27 +61,34 @@ export default function LoginPage() {
     router.push('/dashboard')
   }
 
+  const inputCls = 'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
+
   return (
-    <main className="min-h-screen bg-[#0d0d0d] flex items-center justify-center px-6 py-12">
+    <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center px-6 py-12">
+      {/* Theme toggle pinned top-right */}
+      <div className="fixed top-4 right-4">
+        <ThemeToggle />
+      </div>
+
       <div className="w-full max-w-sm">
         <div className="text-center mb-10">
           <h1
-            className="text-4xl font-bold tracking-widest text-[#d4af37] mb-2"
+            className="text-4xl font-bold tracking-widest text-[var(--sl-accent)] mb-2"
             style={{ fontFamily: 'Georgia, serif' }}
           >
             SQUASH LIFE
           </h1>
-          <p className="text-white/30 text-sm tracking-widest">PLAYER PORTAL</p>
+          <p className="text-[var(--sl-text-30)] text-sm tracking-widest">PLAYER PORTAL</p>
         </div>
 
-        <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-8 space-y-6">
+        <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-8 space-y-6">
 
           {/* ── Google ── */}
           <div>
             <button
               onClick={handleGoogleLogin}
               disabled={loading}
-              className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold py-3 px-6 rounded-xl hover:bg-white/90 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold py-3 px-6 rounded-xl border border-gray-200 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 48 48">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -94,15 +102,15 @@ export default function LoginPage() {
 
           {/* ── Divider ── */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-white/10" />
-            <span className="text-white/20 text-xs tracking-widest">OR</span>
-            <div className="flex-1 h-px bg-white/10" />
+            <div className="flex-1 h-px bg-[var(--sl-border)]" />
+            <span className="text-[var(--sl-text-20)] text-xs tracking-widest">OR</span>
+            <div className="flex-1 h-px bg-[var(--sl-border)]" />
           </div>
 
           {/* ── Email / Password ── */}
           <form onSubmit={handleSignIn} className="space-y-3">
             <div>
-              <label className="block text-[10px] font-bold tracking-widest text-white/30 mb-1">
+              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">
                 EMAIL
               </label>
               <input
@@ -111,11 +119,11 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
                 required
-                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#d4af37]/40 transition"
+                className={inputCls}
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold tracking-widest text-white/30 mb-1">
+              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">
                 PASSWORD
               </label>
               <input
@@ -124,7 +132,7 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#d4af37]/40 transition"
+                className={inputCls}
               />
             </div>
 
@@ -135,7 +143,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+              className="w-full py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed mt-1"
             >
               SIGN IN
             </button>
@@ -144,7 +152,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleSignUp}
               disabled={loading}
-              className="w-full py-2.5 rounded-xl border border-white/10 text-white/40 font-semibold text-xs tracking-widest hover:border-white/20 hover:text-white/60 transition disabled:opacity-50"
+              className="w-full py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] font-semibold text-xs tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition disabled:opacity-50"
             >
               CREATE ACCOUNT
             </button>
@@ -154,13 +162,13 @@ export default function LoginPage() {
           {isLocalhost && (
             <>
               <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-white/5" />
-                <span className="text-white/10 text-[10px] tracking-widest">DEV</span>
-                <div className="flex-1 h-px bg-white/5" />
+                <div className="flex-1 h-px bg-[var(--sl-border-faint)]" />
+                <span className="text-[var(--sl-text-10)] text-[10px] tracking-widest">DEV</span>
+                <div className="flex-1 h-px bg-[var(--sl-border-faint)]" />
               </div>
               <button
                 onClick={handleDevBypass}
-                className="w-full py-2 rounded-lg border border-dashed border-white/10 text-white/20 text-xs tracking-widest hover:text-white/40 hover:border-white/20 transition"
+                className="w-full py-2 rounded-lg border border-dashed border-[var(--sl-border)] text-[var(--sl-text-20)] text-xs tracking-widest hover:text-[var(--sl-text-40)] hover:border-[var(--sl-text-20)] transition"
               >
                 Enter as Dev Player
               </button>

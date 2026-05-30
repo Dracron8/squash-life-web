@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
+import ThemeToggle from '@/app/components/ThemeToggle'
 
 type Props = { params: Promise<{ id: string }> }
 
@@ -160,39 +161,38 @@ export default async function TournamentPage({ params }: Props) {
       )}`
     : null
 
-  const eventFormat = detail?.has_singles_draw && detail?.has_doubles_draw
-    ? 'Singles & Doubles'
-    : detail?.has_doubles_draw
-    ? 'Doubles Only'
-    : 'Singles Only'
-
   return (
-    <main className="min-h-screen bg-[#0d0d0d] text-white">
+    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
 
       {/* ── Nav ── */}
-      <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold tracking-widest text-[#d4af37]" style={{ fontFamily: 'Georgia, serif' }}>
+      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
+        <Link href="/" className="text-2xl font-bold tracking-widest text-[var(--sl-accent)]" style={{ fontFamily: 'Georgia, serif' }}>
           SQUASH LIFE
         </Link>
-        <Link href={user ? '/dashboard' : '/login'}
-          className="text-sm font-semibold tracking-widest text-[#d4af37] border border-[#d4af37]/40 px-4 py-2 rounded-lg hover:bg-[#d4af37]/10 transition">
-          {user ? 'DASHBOARD' : 'SIGN IN'}
-        </Link>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <Link
+            href={user ? '/dashboard' : '/login'}
+            className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-4 py-2 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
+          >
+            {user ? 'DASHBOARD' : 'SIGN IN'}
+          </Link>
+        </div>
       </header>
 
       <div className="max-w-6xl mx-auto px-6 py-8">
 
         {/* ── Header row ── */}
         <div className="mb-8">
-          <Link href="/" className="text-white/30 text-xs tracking-widest hover:text-white/60 transition inline-block mb-4">
+          <Link href="/" className="text-[var(--sl-text-30)] text-xs tracking-widest hover:text-[var(--sl-text-60)] transition inline-block mb-4">
             ← ALL TOURNAMENTS
           </Link>
           <div className="flex items-start justify-between gap-4">
-            <h1 className="text-4xl font-bold tracking-wider text-[#d4af37] leading-tight">{tournament.name}</h1>
+            <h1 className="text-4xl font-bold tracking-wider text-[var(--sl-accent)] leading-tight">{tournament.name}</h1>
             <span className={`shrink-0 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded-lg mt-1 ${
               isOpen
                 ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                : 'bg-white/5 text-white/40 border border-white/10'
+                : 'bg-[var(--sl-border-faint)] text-[var(--sl-text-40)] border border-[var(--sl-border)]'
             }`}>
               {statusLabel}
             </span>
@@ -211,32 +211,32 @@ export default async function TournamentPage({ params }: Props) {
                 user ? (
                   <Link
                     href={`/tournament/${id}/register`}
-                    className="block w-full text-center py-4 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition"
+                    className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
                   >
                     REGISTER NOW
                   </Link>
                 ) : (
                   <Link
                     href={`/login?next=/tournament/${id}`}
-                    className="block w-full text-center py-4 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition"
+                    className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
                   >
                     SIGN IN TO REGISTER
                   </Link>
                 )
               ) : (
-                <div className="w-full text-center py-3.5 rounded-xl bg-white/5 border border-white/10 text-white/30 font-semibold tracking-widest text-sm">
+                <div className="w-full text-center py-3.5 rounded-xl bg-[var(--sl-border-faint)] border border-[var(--sl-border)] text-[var(--sl-text-30)] font-semibold tracking-widest text-sm">
                   REGISTRATION CLOSED
                 </div>
               )
             )}
 
             {/* Combined venue + date/time card */}
-            <div className="bg-[#1a1a1a] border border-white/10 rounded-xl p-5 space-y-4">
+            <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-xl p-5 space-y-4">
               {club && (
                 <div>
-                  <p className="text-[10px] font-bold tracking-widest text-white/30 mb-2">VENUE</p>
-                  <p className="font-semibold text-white text-base leading-snug">{club.name}</p>
-                  <p className="text-white/50 text-sm mt-0.5">
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-2">VENUE</p>
+                  <p className="font-semibold text-[var(--sl-text)] text-base leading-snug">{club.name}</p>
+                  <p className="text-[var(--sl-text-50)] text-sm mt-0.5">
                     {[club.address, club.city, club.province, club.country].filter(Boolean).join(', ')}
                   </p>
                 </div>
@@ -244,7 +244,7 @@ export default async function TournamentPage({ params }: Props) {
 
               {detail?.start_date && (
                 <div className="space-y-1.5">
-                  <p className="text-white/70 text-sm flex items-center gap-2 flex-wrap">
+                  <p className="text-[var(--sl-text-60)] text-sm flex items-center gap-2 flex-wrap">
                     <span>📅</span>
                     <span>
                       {formatDateShort(detail.start_date)}
@@ -253,13 +253,13 @@ export default async function TournamentPage({ params }: Props) {
                         : ''}
                     </span>
                     {dayCount > 1 && (
-                      <span className="text-[10px] font-bold tracking-widest text-white/30 bg-white/5 px-2 py-0.5 rounded">
+                      <span className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] bg-[var(--sl-border-faint)] px-2 py-0.5 rounded">
                         {dayCount}-DAY EVENT
                       </span>
                     )}
                   </p>
                   {detail.daily_start_time && detail.daily_end_time && (
-                    <p className="text-white/40 text-sm flex items-center gap-2">
+                    <p className="text-[var(--sl-text-40)] text-sm flex items-center gap-2">
                       <span>🕐</span>
                       <span>First match {formatTime(detail.daily_start_time)} — Last match starts {formatTime(detail.daily_end_time)}</span>
                     </p>
@@ -268,7 +268,7 @@ export default async function TournamentPage({ params }: Props) {
               )}
 
               {deadline && (
-                <p className={`text-xs font-semibold flex items-center gap-1.5 ${deadlineUrgent ? 'text-red-400' : 'text-white/30'}`}>
+                <p className={`text-xs font-semibold flex items-center gap-1.5 ${deadlineUrgent ? 'text-red-400' : 'text-[var(--sl-text-30)]'}`}>
                   <span>{deadlineUrgent ? '⚠️' : '📋'}</span>
                   <span>Register by {formatDate(detail!.registration_deadline!)}</span>
                   {daysUntilDeadline !== null && daysUntilDeadline <= 7 && daysUntilDeadline >= 0 && (
@@ -279,7 +279,7 @@ export default async function TournamentPage({ params }: Props) {
 
               {mapsUrl && (
                 <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-[#d4af37] border border-[#d4af37]/40 px-4 py-2 rounded-lg hover:bg-[#d4af37]/10 transition">
+                  className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-4 py-2 rounded-lg hover:bg-[var(--sl-accent-10)] transition">
                   GET DIRECTIONS ↗
                 </a>
               )}
@@ -287,11 +287,11 @@ export default async function TournamentPage({ params }: Props) {
 
             {/* Prize info */}
             {detail?.prize_purse != null && detail.prize_purse > 0 && (
-              <div className="bg-[#d4af37]/5 border border-[#d4af37]/20 rounded-xl px-5 py-4 flex items-center gap-3">
+              <div className="bg-[var(--sl-accent-05)] border border-[var(--sl-accent-20)] rounded-xl px-5 py-4 flex items-center gap-3">
                 <span className="text-2xl">🏅</span>
                 <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[#d4af37]/60 mb-0.5">PRIZE PURSE</p>
-                  <p className="text-xl font-bold text-[#d4af37]">${detail.prize_purse.toLocaleString()}</p>
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent-60)] mb-0.5">PRIZE PURSE</p>
+                  <p className="text-xl font-bold text-[var(--sl-accent)]">${detail.prize_purse.toLocaleString()}</p>
                 </div>
               </div>
             )}
@@ -299,20 +299,20 @@ export default async function TournamentPage({ params }: Props) {
 
           {/* ══ RIGHT COLUMN — sticky registration card ══ */}
           <div className="md:col-span-1">
-            <div className="md:sticky md:top-4 bg-[#1a1a1a] border border-white/10 rounded-xl p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-8rem)]">
+            <div className="md:sticky md:top-4 bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-xl p-4 space-y-3 overflow-y-auto max-h-[calc(100vh-8rem)]">
 
               {/* Players registered */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-bold tracking-widest text-white/30">PLAYERS REGISTERED</p>
-                  <p className="text-sm font-semibold text-white">
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">PLAYERS REGISTERED</p>
+                  <p className="text-sm font-semibold text-[var(--sl-text)]">
                     {registered}
-                    {capacity != null && <span className="text-white/30"> / {capacity}</span>}
+                    {capacity != null && <span className="text-[var(--sl-text-30)]"> / {capacity}</span>}
                   </p>
                 </div>
-                <div className="w-full bg-white/5 rounded-full h-1.5">
+                <div className="w-full bg-[var(--sl-progress-track)] rounded-full h-1.5">
                   <div
-                    className="bg-[#d4af37] h-1.5 rounded-full transition-all"
+                    className="bg-[var(--sl-accent)] h-1.5 rounded-full transition-all"
                     style={{ width: capacityPct != null ? `${capacityPct}%` : '0%' }}
                   />
                 </div>
@@ -321,43 +321,43 @@ export default async function TournamentPage({ params }: Props) {
                 )}
               </div>
 
-              <div className="h-px bg-white/10" />
+              <div className="h-px bg-[var(--sl-border)]" />
 
               {/* Divisions */}
               <div>
-                <p className="text-[10px] font-bold tracking-widest text-white/30 mb-2">DIVISIONS</p>
+                <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-2">DIVISIONS</p>
                 <div className="flex gap-1">
                   {DIVISIONS.map((d) => (
-                    <div key={d.label} className="flex flex-col items-center flex-1 bg-[#111] border border-[#d4af37]/20 rounded-md px-1 py-1.5">
-                      <span className="text-[#d4af37] font-bold text-[11px] tracking-wide">{d.label}</span>
-                      <span className="text-white/25 text-[8px] mt-0.5 leading-none">{d.range}</span>
+                    <div key={d.label} className="flex flex-col items-center flex-1 bg-[var(--sl-surface-deep)] border border-[var(--sl-accent-20)] rounded-md px-1 py-1.5">
+                      <span className="text-[var(--sl-accent)] font-bold text-[11px] tracking-wide">{d.label}</span>
+                      <span className="text-[var(--sl-text-25)] text-[8px] mt-0.5 leading-none">{d.range}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="h-px bg-white/10" />
+              <div className="h-px bg-[var(--sl-border)]" />
 
               {/* Entry fee */}
               <div>
-                <p className="text-[10px] font-bold tracking-widest text-white/30 mb-2">ENTRY FEE</p>
+                <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-2">ENTRY FEE</p>
                 {detail?.has_singles_draw && detail.singles_fee != null && (
                   <div className="flex items-baseline justify-between">
-                    <span className="text-white/50 text-sm">Singles</span>
-                    <span className="text-[#d4af37] font-bold text-2xl">${detail.singles_fee}</span>
+                    <span className="text-[var(--sl-text-50)] text-sm">Singles</span>
+                    <span className="text-[var(--sl-accent)] font-bold text-2xl">${detail.singles_fee}</span>
                   </div>
                 )}
                 {detail?.has_doubles_draw && detail.doubles_fee != null && (
                   <div className="flex items-baseline justify-between mt-1">
-                    <span className="text-white/50 text-sm">Doubles</span>
-                    <span className="text-[#d4af37] font-bold text-xl">${detail.doubles_fee}</span>
+                    <span className="text-[var(--sl-text-50)] text-sm">Doubles</span>
+                    <span className="text-[var(--sl-accent)] font-bold text-xl">${detail.doubles_fee}</span>
                   </div>
                 )}
               </div>
 
               {/* CTA button */}
               {isRegistered ? (
-                <div className="w-full text-center py-3.5 rounded-xl bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] font-semibold tracking-widest text-sm">
+                <div className="w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] text-[var(--sl-accent)] font-semibold tracking-widest text-sm">
                   ✓ REGISTERED
                 </div>
               ) : isOpen ? (
@@ -365,7 +365,7 @@ export default async function TournamentPage({ params }: Props) {
                   {user ? (
                     <Link
                       href={`/tournament/${id}/register`}
-                      className="block w-full text-center py-3.5 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition"
+                      className="block w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
                     >
                       REGISTER NOW
                     </Link>
@@ -373,27 +373,27 @@ export default async function TournamentPage({ params }: Props) {
                     <>
                       <Link
                         href={`/login?next=/tournament/${id}`}
-                        className="block w-full text-center py-3.5 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition"
+                        className="block w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
                       >
                         SIGN IN TO REGISTER
                       </Link>
-                      <p className="text-white/25 text-xs text-center">Sign in required to register</p>
+                      <p className="text-[var(--sl-text-25)] text-xs text-center">Sign in required to register</p>
                     </>
                   )}
                 </>
               ) : (
-                <div className="w-full text-center py-3.5 rounded-xl bg-white/5 border border-white/10 text-white/30 font-semibold tracking-widest text-sm">
+                <div className="w-full text-center py-3.5 rounded-xl bg-[var(--sl-border-faint)] border border-[var(--sl-border)] text-[var(--sl-text-30)] font-semibold tracking-widest text-sm">
                   REGISTRATION CLOSED
                 </div>
               )}
 
               {/* Guaranteed matches — subtle, below button */}
               {isKnockoutPlate && (
-                <div className="flex items-start gap-2 bg-[#d4af37]/5 border border-[#d4af37]/15 rounded-lg px-3 py-3">
+                <div className="flex items-start gap-2 bg-[var(--sl-accent-05)] border border-[var(--sl-accent-15)] rounded-lg px-3 py-3">
                   <span className="text-sm shrink-0 mt-0.5">🏆</span>
                   <div>
-                    <p className="text-[#d4af37]/80 text-xs font-semibold leading-snug">Two matches guaranteed</p>
-                    <p className="text-[#d4af37]/40 text-[10px] mt-0.5">Win or lose your first match, you play again</p>
+                    <p className="text-[var(--sl-accent-80)] text-xs font-semibold leading-snug">Two matches guaranteed</p>
+                    <p className="text-[var(--sl-accent-40)] text-[10px] mt-0.5">Win or lose your first match, you play again</p>
                   </div>
                 </div>
               )}
@@ -405,18 +405,18 @@ export default async function TournamentPage({ params }: Props) {
 
       {/* ── Mobile pinned CTA bar ── */}
       {!isRegistered && isOpen && (
-        <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 bg-[#0d0d0d]/95 border-t border-white/10 backdrop-blur-sm">
+        <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 border-t border-[var(--sl-border)] backdrop-blur-sm" style={{ backgroundColor: 'var(--sl-mobile-bar)' }}>
           {user ? (
             <Link
               href={`/tournament/${id}/register`}
-              className="block w-full text-center py-4 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition"
+              className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
             >
               REGISTER NOW
             </Link>
           ) : (
             <Link
               href={`/login?next=/tournament/${id}`}
-              className="block w-full text-center py-4 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition"
+              className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
             >
               SIGN IN TO REGISTER
             </Link>

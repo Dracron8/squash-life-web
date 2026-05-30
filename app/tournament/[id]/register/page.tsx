@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ThemeToggle from '@/app/components/ThemeToggle'
 
 // ── Division helpers ────────────────────────────────────────────────────────
 
@@ -36,23 +37,23 @@ type TournamentInfo = {
 
 type EventType = 'singles' | 'doubles' | 'both'
 
-// ── Shared input classes ────────────────────────────────────────────────────
+// ── Shared input / label classes ────────────────────────────────────────────
 
 const inputCls =
-  'w-full bg-[#111] border border-white/10 rounded-lg px-4 py-2.5 text-sm text-white placeholder-white/20 focus:outline-none focus:border-[#d4af37]/50 transition'
+  'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
 
-const labelCls = 'block text-[10px] font-bold tracking-widest text-white/30 mb-1'
+const labelCls = 'block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1'
 
 // ── Section wrapper ─────────────────────────────────────────────────────────
 
 function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6">
+    <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6">
       <div className="flex items-center gap-3 mb-5">
-        <span className="w-6 h-6 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-xs font-bold flex items-center justify-center shrink-0">
+        <span className="w-6 h-6 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] text-[var(--sl-accent)] text-xs font-bold flex items-center justify-center shrink-0">
           {n}
         </span>
-        <h2 className="text-sm font-bold tracking-widest text-white/80">{title}</h2>
+        <h2 className="text-sm font-bold tracking-widest text-[var(--sl-text-80)]">{title}</h2>
       </div>
       {children}
     </div>
@@ -164,8 +165,8 @@ export default function RegisterPage() {
 
   if (loadingTournament) {
     return (
-      <main className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+      <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
       </main>
     )
   }
@@ -173,25 +174,28 @@ export default function RegisterPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <main className="min-h-screen bg-[#0d0d0d] text-white">
+    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
       {/* Header */}
-      <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold tracking-widest text-[#d4af37]" style={{ fontFamily: 'Georgia, serif' }}>
+      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
+        <Link href="/" className="text-2xl font-bold tracking-widest text-[var(--sl-accent)]" style={{ fontFamily: 'Georgia, serif' }}>
           SQUASH LIFE
         </Link>
-        <Link
-          href={`/tournament/${id}`}
-          className="text-xs font-semibold tracking-widest text-white/30 hover:text-white/60 transition"
-        >
-          ← BACK
-        </Link>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <Link
+            href={`/tournament/${id}`}
+            className="text-xs font-semibold tracking-widest text-[var(--sl-text-30)] hover:text-[var(--sl-text-60)] transition"
+          >
+            ← BACK
+          </Link>
+        </div>
       </header>
 
       <div className="px-6 py-10 max-w-xl mx-auto">
         {/* Page title */}
         <div className="mb-8">
-          <p className="text-white/30 text-xs tracking-widest uppercase mb-1">Registration</p>
-          <h1 className="text-2xl font-bold tracking-wider">{tournament?.name ?? 'Tournament'}</h1>
+          <p className="text-[var(--sl-text-30)] text-xs tracking-widest uppercase mb-1">Registration</p>
+          <h1 className="text-2xl font-bold tracking-wider text-[var(--sl-text)]">{tournament?.name ?? 'Tournament'}</h1>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
@@ -234,7 +238,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className={labelCls}>PHONE NUMBER <span className="text-white/20">(optional)</span></label>
+              <label className={labelCls}>PHONE NUMBER <span className="text-[var(--sl-text-20)]">(optional)</span></label>
               <input
                 type="tel"
                 value={phone}
@@ -261,7 +265,7 @@ export default function RegisterPage() {
                   className={inputCls}
                 />
                 {rating && !isNaN(parseFloat(rating)) && (
-                  <p className="text-[#d4af37] text-xs mt-2 font-semibold">
+                  <p className="text-[var(--sl-accent)] text-xs mt-2 font-semibold">
                     Auto-assigned division: <span className="font-bold">{ratingToDivision(parseFloat(rating))}</span>
                   </p>
                 )}
@@ -272,12 +276,14 @@ export default function RegisterPage() {
               <div
                 onClick={() => { setHasNoRating(!hasNoRating); setSelectedDivision(null) }}
                 className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
-                  hasNoRating ? 'bg-[#d4af37] border-[#d4af37]' : 'border-white/20 bg-transparent'
+                  hasNoRating
+                    ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)]'
+                    : 'border-[var(--sl-text-20)] bg-transparent'
                 }`}
               >
-                {hasNoRating && <span className="text-black text-xs font-bold">✓</span>}
+                {hasNoRating && <span className="text-[var(--sl-btn-text)] text-xs font-bold">✓</span>}
               </div>
-              <span className="text-sm text-white/60">I don&apos;t have a Club Locker rating</span>
+              <span className="text-sm text-[var(--sl-text-60)]">I don&apos;t have a Club Locker rating</span>
             </label>
 
             {hasNoRating && (
@@ -291,30 +297,30 @@ export default function RegisterPage() {
                       onClick={() => setSelectedDivision(d.label)}
                       className={`w-full text-left px-4 py-3 rounded-xl border transition ${
                         selectedDivision === d.label
-                          ? 'bg-[#d4af37]/10 border-[#d4af37] text-white'
-                          : 'bg-[#111] border-white/10 text-white/60 hover:border-white/20 hover:text-white/80'
+                          ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)] text-[var(--sl-text)]'
+                          : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-80)]'
                       }`}
                     >
                       <div className="flex items-center justify-between">
                         <div>
-                          <span className={`font-bold text-sm tracking-widest ${selectedDivision === d.label ? 'text-[#d4af37]' : 'text-white/80'}`}>
+                          <span className={`font-bold text-sm tracking-widest ${selectedDivision === d.label ? 'text-[var(--sl-accent)]' : 'text-[var(--sl-text-80)]'}`}>
                             {d.label}
                           </span>
-                          <span className="text-xs text-white/40 ml-3">{d.subtitle}</span>
+                          <span className="text-xs text-[var(--sl-text-40)] ml-3">{d.subtitle}</span>
                         </div>
-                        <span className="text-xs text-white/30 shrink-0 ml-2">USR {d.range}</span>
+                        <span className="text-xs text-[var(--sl-text-30)] shrink-0 ml-2">USR {d.range}</span>
                       </div>
                     </button>
                   ))}
                 </div>
-                <p className="text-white/20 text-xs mt-4 leading-relaxed">
+                <p className="text-[var(--sl-text-20)] text-xs mt-4 leading-relaxed">
                   The Tournament Director reserves the right to reassign divisions based on known playing level.
                 </p>
               </div>
             )}
 
             {!hasNoRating && (
-              <p className="text-white/20 text-xs leading-relaxed">
+              <p className="text-[var(--sl-text-20)] text-xs leading-relaxed">
                 The Tournament Director reserves the right to reassign divisions based on known playing level.
               </p>
             )}
@@ -326,40 +332,46 @@ export default function RegisterPage() {
               <div className="space-y-2">
                 {tournament.has_singles && (
                   <label className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
-                    eventType === 'singles' ? 'bg-[#d4af37]/10 border-[#d4af37]' : 'bg-[#111] border-white/10 hover:border-white/20'
+                    eventType === 'singles'
+                      ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)]'
+                      : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] hover:border-[var(--sl-text-20)]'
                   }`}>
                     <div className="flex items-center gap-3">
-                      <input type="radio" name="event" value="singles" checked={eventType === 'singles'} onChange={() => setEventType('singles')} className="accent-[#d4af37]" />
-                      <span className="text-sm font-semibold">Singles</span>
+                      <input type="radio" name="event" value="singles" checked={eventType === 'singles'} onChange={() => setEventType('singles')} />
+                      <span className="text-sm font-semibold text-[var(--sl-text)]">Singles</span>
                     </div>
                     {tournament.singles_fee != null && (
-                      <span className="text-[#d4af37] font-bold text-sm">${tournament.singles_fee}</span>
+                      <span className="text-[var(--sl-accent)] font-bold text-sm">${tournament.singles_fee}</span>
                     )}
                   </label>
                 )}
                 {tournament.has_doubles && (
                   <label className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
-                    eventType === 'doubles' ? 'bg-[#d4af37]/10 border-[#d4af37]' : 'bg-[#111] border-white/10 hover:border-white/20'
+                    eventType === 'doubles'
+                      ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)]'
+                      : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] hover:border-[var(--sl-text-20)]'
                   }`}>
                     <div className="flex items-center gap-3">
-                      <input type="radio" name="event" value="doubles" checked={eventType === 'doubles'} onChange={() => setEventType('doubles')} className="accent-[#d4af37]" />
-                      <span className="text-sm font-semibold">Doubles</span>
+                      <input type="radio" name="event" value="doubles" checked={eventType === 'doubles'} onChange={() => setEventType('doubles')} />
+                      <span className="text-sm font-semibold text-[var(--sl-text)]">Doubles</span>
                     </div>
                     {tournament.doubles_fee != null && (
-                      <span className="text-[#d4af37] font-bold text-sm">${tournament.doubles_fee}</span>
+                      <span className="text-[var(--sl-accent)] font-bold text-sm">${tournament.doubles_fee}</span>
                     )}
                   </label>
                 )}
                 {tournament.has_singles && tournament.has_doubles && (
                   <label className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
-                    eventType === 'both' ? 'bg-[#d4af37]/10 border-[#d4af37]' : 'bg-[#111] border-white/10 hover:border-white/20'
+                    eventType === 'both'
+                      ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)]'
+                      : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] hover:border-[var(--sl-text-20)]'
                   }`}>
                     <div className="flex items-center gap-3">
-                      <input type="radio" name="event" value="both" checked={eventType === 'both'} onChange={() => setEventType('both')} className="accent-[#d4af37]" />
-                      <span className="text-sm font-semibold">Singles + Doubles</span>
+                      <input type="radio" name="event" value="both" checked={eventType === 'both'} onChange={() => setEventType('both')} />
+                      <span className="text-sm font-semibold text-[var(--sl-text)]">Singles + Doubles</span>
                     </div>
                     {tournament.singles_fee != null && tournament.doubles_fee != null && (
-                      <span className="text-[#d4af37] font-bold text-sm">
+                      <span className="text-[var(--sl-accent)] font-bold text-sm">
                         ${tournament.singles_fee + tournament.doubles_fee}
                       </span>
                     )}
@@ -375,14 +387,16 @@ export default function RegisterPage() {
               <div
                 onClick={() => setSaveInfo(!saveInfo)}
                 className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition ${
-                  saveInfo ? 'bg-[#d4af37] border-[#d4af37]' : 'border-white/20 bg-transparent'
+                  saveInfo
+                    ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)]'
+                    : 'border-[var(--sl-text-20)] bg-transparent'
                 }`}
               >
-                {saveInfo && <span className="text-black text-xs font-bold">✓</span>}
+                {saveInfo && <span className="text-[var(--sl-btn-text)] text-xs font-bold">✓</span>}
               </div>
               <div>
-                <span className="text-sm text-white/70">Save my info for future tournaments</span>
-                <p className="text-white/30 text-xs mt-0.5">Creates a Squash Life account linked to your email</p>
+                <span className="text-sm text-[var(--sl-text-60)]">Save my info for future tournaments</span>
+                <p className="text-[var(--sl-text-30)] text-xs mt-0.5">Creates a Squash Life account linked to your email</p>
               </div>
             </label>
 
@@ -403,7 +417,7 @@ export default function RegisterPage() {
             )}
 
             {!saveInfo && (
-              <p className="text-white/20 text-xs">Continuing as guest — no account will be created.</p>
+              <p className="text-[var(--sl-text-20)] text-xs">Continuing as guest — no account will be created.</p>
             )}
           </Section>
 
@@ -411,26 +425,26 @@ export default function RegisterPage() {
           <Section n={5} title="SUMMARY">
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Name</span>
-                <span className="text-white font-medium">
-                  {firstName || lastName ? `${firstName} ${lastName}`.trim() : <span className="text-white/20">—</span>}
+                <span className="text-[var(--sl-text-40)]">Name</span>
+                <span className="text-[var(--sl-text)] font-medium">
+                  {firstName || lastName ? `${firstName} ${lastName}`.trim() : <span className="text-[var(--sl-text-20)]">—</span>}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Division</span>
-                <span className={`font-bold tracking-widest text-sm ${assignedDivision ? 'text-[#d4af37]' : 'text-white/20'}`}>
+                <span className="text-[var(--sl-text-40)]">Division</span>
+                <span className={`font-bold tracking-widest text-sm ${assignedDivision ? 'text-[var(--sl-accent)]' : 'text-[var(--sl-text-20)]'}`}>
                   {assignedDivision ?? '—'}
                 </span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-white/40">Event</span>
-                <span className="text-white capitalize">{eventType.replace('both', 'Singles + Doubles')}</span>
+                <span className="text-[var(--sl-text-40)]">Event</span>
+                <span className="text-[var(--sl-text)] capitalize">{eventType.replace('both', 'Singles + Doubles')}</span>
               </div>
-              <div className="h-px bg-white/10" />
+              <div className="h-px bg-[var(--sl-border)]" />
               <div className="flex justify-between">
-                <span className="text-white/40 text-sm">Entry Fee</span>
-                <span className="text-[#d4af37] font-bold text-lg">
-                  {entryFee != null ? `$${entryFee}` : <span className="text-white/20 text-sm">—</span>}
+                <span className="text-[var(--sl-text-40)] text-sm">Entry Fee</span>
+                <span className="text-[var(--sl-accent)] font-bold text-lg">
+                  {entryFee != null ? `$${entryFee}` : <span className="text-[var(--sl-text-20)] text-sm">—</span>}
                 </span>
               </div>
             </div>
@@ -442,13 +456,13 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={!canSubmit}
-              className="w-full py-4 rounded-xl bg-[#d4af37] text-black font-bold tracking-widest text-sm hover:bg-[#c9a84c] transition disabled:opacity-30 disabled:cursor-not-allowed"
+              className="w-full py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-30 disabled:cursor-not-allowed"
             >
               PROCEED TO PAYMENT
             </button>
 
             {!canSubmit && (
-              <p className="text-white/20 text-xs text-center mt-3">
+              <p className="text-[var(--sl-text-20)] text-xs text-center mt-3">
                 {!assignedDivision
                   ? 'Enter your rating or select a division to continue'
                   : 'Complete all required fields to continue'}

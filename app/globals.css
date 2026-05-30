@@ -1,26 +1,87 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ── Dark theme (default) ──────────────────────────────────────────────── */
+:root {
+  --sl-bg: #0d0d0d;
+  --sl-surface: #1a1a1a;
+  --sl-surface-deep: #111111;
+  --sl-surface-hover: #1f1f1f;
+  --sl-text: #ffffff;
+  --sl-text-80: rgba(255, 255, 255, 0.8);
+  --sl-text-60: rgba(255, 255, 255, 0.6);
+  --sl-text-50: rgba(255, 255, 255, 0.5);
+  --sl-text-40: rgba(255, 255, 255, 0.4);
+  --sl-text-30: rgba(255, 255, 255, 0.3);
+  --sl-text-25: rgba(255, 255, 255, 0.25);
+  --sl-text-20: rgba(255, 255, 255, 0.2);
+  --sl-text-10: rgba(255, 255, 255, 0.1);
+  --sl-accent: #d4af37;
+  --sl-accent-hover: #c9a84c;
+  --sl-accent-80: rgba(212, 175, 55, 0.8);
+  --sl-accent-60: rgba(212, 175, 55, 0.6);
+  --sl-accent-40: rgba(212, 175, 55, 0.4);
+  --sl-accent-30: rgba(212, 175, 55, 0.3);
+  --sl-accent-20: rgba(212, 175, 55, 0.2);
+  --sl-accent-15: rgba(212, 175, 55, 0.15);
+  --sl-accent-10: rgba(212, 175, 55, 0.1);
+  --sl-accent-05: rgba(212, 175, 55, 0.05);
+  --sl-border: rgba(255, 255, 255, 0.1);
+  --sl-border-faint: rgba(255, 255, 255, 0.05);
+  --sl-btn-text: #000000;
+  --sl-mobile-bar: rgba(13, 13, 13, 0.95);
+  --sl-progress-track: rgba(255, 255, 255, 0.05);
+}
+
+/* ── Light theme ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --sl-bg: #ffffff;
+  --sl-surface: #f5f5f5;
+  --sl-surface-deep: #ebebeb;
+  --sl-surface-hover: #eeeeee;
+  --sl-text: #1a1a1a;
+  --sl-text-80: #333333;
+  --sl-text-60: #555555;
+  --sl-text-50: #777777;
+  --sl-text-40: #888888;
+  --sl-text-30: #aaaaaa;
+  --sl-text-25: #bbbbbb;
+  --sl-text-20: #cccccc;
+  --sl-text-10: #e0e0e0;
+  --sl-accent: #c41e3a;
+  --sl-accent-hover: #a01830;
+  --sl-accent-80: rgba(196, 30, 58, 0.8);
+  --sl-accent-60: rgba(196, 30, 58, 0.7);
+  --sl-accent-40: rgba(196, 30, 58, 0.5);
+  --sl-accent-30: rgba(196, 30, 58, 0.35);
+  --sl-accent-20: rgba(196, 30, 58, 0.2);
+  --sl-accent-15: rgba(196, 30, 58, 0.15);
+  --sl-accent-10: rgba(196, 30, 58, 0.08);
+  --sl-accent-05: rgba(196, 30, 58, 0.04);
+  --sl-border: #e0e0e0;
+  --sl-border-faint: #f0f0f0;
+  --sl-btn-text: #ffffff;
+  --sl-mobile-bar: rgba(255, 255, 255, 0.95);
+  --sl-progress-track: rgba(0, 0, 0, 0.05);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background-color: var(--sl-bg);
+  color: var(--sl-text);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Inputs / placeholders inherit theme */
+input::placeholder,
+textarea::placeholder {
+  color: var(--sl-text-20);
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--sl-accent);
 }

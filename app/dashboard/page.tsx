@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import ThemeToggle from '@/app/components/ThemeToggle'
 
 const kDevPlayerId = '00000000-0000-0000-0000-000000000002'
 
@@ -117,64 +118,67 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[#0d0d0d] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin" />
+      <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
       </main>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[#0d0d0d] text-white">
-      <header className="border-b border-white/10 px-6 py-4 flex items-center justify-between">
-        <Link href="/" className="text-2xl font-bold tracking-widest text-[#d4af37]" style={{ fontFamily: 'Georgia, serif' }}>
+    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
+      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
+        <Link href="/" className="text-2xl font-bold tracking-widest text-[var(--sl-accent)]" style={{ fontFamily: 'Georgia, serif' }}>
           SQUASH LIFE
         </Link>
-        <button
-          onClick={handleSignOut}
-          className="text-xs font-semibold tracking-widest text-white/30 hover:text-white/60 transition"
-        >
-          SIGN OUT
-        </button>
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
+          <button
+            onClick={handleSignOut}
+            className="text-xs font-semibold tracking-widest text-[var(--sl-text-30)] hover:text-[var(--sl-text-60)] transition"
+          >
+            SIGN OUT
+          </button>
+        </div>
       </header>
 
       <section className="px-6 py-10 max-w-3xl mx-auto">
         <div className="mb-10">
           <div className="flex items-center gap-3 mb-1">
-            <p className="text-white/30 text-xs tracking-widest uppercase">Welcome back</p>
+            <p className="text-[var(--sl-text-30)] text-xs tracking-widest uppercase">Welcome back</p>
             {isDevMode && (
-              <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded border border-dashed border-white/20 text-white/20">
+              <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded border border-dashed border-[var(--sl-text-20)] text-[var(--sl-text-20)]">
                 DEV MODE
               </span>
             )}
           </div>
-          <h1 className="text-3xl font-bold tracking-wider">{displayName.toUpperCase()}</h1>
+          <h1 className="text-3xl font-bold tracking-wider text-[var(--sl-text)]">{displayName.toUpperCase()}</h1>
           {player?.usr_rating && (
-            <p className="text-[#d4af37] text-sm mt-1 tracking-widest">USR {player.usr_rating}</p>
+            <p className="text-[var(--sl-accent)] text-sm mt-1 tracking-widest">USR {player.usr_rating}</p>
           )}
         </div>
 
         {/* Upcoming matches */}
         <div className="mb-10">
-          <h2 className="text-xs font-bold tracking-widest text-white/40 uppercase mb-4">Upcoming Matches</h2>
+          <h2 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-4">Upcoming Matches</h2>
           {upcomingMatches.length === 0 ? (
-            <p className="text-white/20 text-sm">No scheduled matches.</p>
+            <p className="text-[var(--sl-text-20)] text-sm">No scheduled matches.</p>
           ) : (
             <div className="grid gap-3">
               {upcomingMatches.map((m) => (
-                <div key={m.id} className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-5">
+                <div key={m.id} className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5">
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold tracking-widest text-[#d4af37]">
+                    <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">
                       {m.division ?? 'OPEN'} — RD {m.round ?? '?'}
                     </span>
                     {m.court && (
-                      <span className="text-[10px] tracking-widest text-white/30">Court {m.court}</span>
+                      <span className="text-[10px] tracking-widest text-[var(--sl-text-30)]">Court {m.court}</span>
                     )}
                   </div>
-                  <p className="text-white/80 text-sm">
+                  <p className="text-[var(--sl-text-80)] text-sm">
                     {m.tournaments?.name ?? 'Tournament'}
                   </p>
                   {m.scheduled_time && (
-                    <p className="text-white/40 text-xs mt-1">
+                    <p className="text-[var(--sl-text-40)] text-xs mt-1">
                       {new Date(m.scheduled_time).toLocaleString('en-AU', {
                         weekday: 'short',
                         day: 'numeric',
@@ -192,13 +196,13 @@ export default function DashboardPage() {
 
         {/* Registrations */}
         <div className="mb-10">
-          <h2 className="text-xs font-bold tracking-widest text-white/40 uppercase mb-4">My Tournaments</h2>
+          <h2 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-4">My Tournaments</h2>
           {registrations.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-white/20 text-sm mb-4">You haven&apos;t entered any tournaments yet.</p>
+              <p className="text-[var(--sl-text-20)] text-sm mb-4">You haven&apos;t entered any tournaments yet.</p>
               <Link
                 href="/"
-                className="inline-block text-sm font-bold tracking-widest text-[#d4af37] border border-[#d4af37]/40 px-6 py-3 rounded-xl hover:bg-[#d4af37]/10 transition"
+                className="inline-block text-sm font-bold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-6 py-3 rounded-xl hover:bg-[var(--sl-accent-10)] transition"
               >
                 BROWSE TOURNAMENTS
               </Link>
@@ -209,13 +213,13 @@ export default function DashboardPage() {
                 <Link
                   key={r.id}
                   href={`/tournament/${r.tournaments?.id}`}
-                  className="block bg-[#1a1a1a] border border-white/10 rounded-2xl p-5 hover:border-[#d4af37]/30 transition"
+                  className="block bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5 hover:border-[var(--sl-accent-30)] transition"
                 >
                   <div className="flex items-start justify-between">
                     <div>
-                      <p className="font-semibold text-sm tracking-wide">{r.tournaments?.name}</p>
+                      <p className="font-semibold text-sm tracking-wide text-[var(--sl-text)]">{r.tournaments?.name}</p>
                       {r.division && (
-                        <span className="text-[10px] font-bold tracking-widest text-[#d4af37] mt-1 inline-block">
+                        <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mt-1 inline-block">
                           {r.division}
                         </span>
                       )}
@@ -224,14 +228,14 @@ export default function DashboardPage() {
                       className={`text-[10px] font-bold tracking-widest px-2 py-1 rounded ${
                         r.status === 'confirmed'
                           ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                          : 'bg-white/5 text-white/30 border border-white/10'
+                          : 'bg-[var(--sl-border-faint)] text-[var(--sl-text-30)] border border-[var(--sl-border)]'
                       }`}
                     >
                       {r.status.toUpperCase()}
                     </span>
                   </div>
                   {r.tournaments?.start_date && (
-                    <p className="text-white/30 text-xs mt-2">
+                    <p className="text-[var(--sl-text-30)] text-xs mt-2">
                       {new Date(r.tournaments.start_date).toLocaleDateString('en-AU', {
                         day: 'numeric',
                         month: 'long',
