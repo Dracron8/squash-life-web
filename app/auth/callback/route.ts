@@ -5,9 +5,18 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  const next = searchParams.get('next') ?? '/dashboard'
+  const oauthError = searchParams.get('error')
+
+  // Validate next param — only allow same-origin relative paths (prevent open redirect)
+  const rawNext = searchParams.get('next') ?? '/dashboard'
+  const safePath = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard'
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin
+
+  // OAuth provider returned an error (e.g. user denied access)
+  if (oauthError) {
+    return NextResponse.redirect(`${siteUrl}/login?error=${encodeURIComponent(oauthError)}`)
+  }
 
   if (code) {
     const cookieStore = await cookies()
@@ -31,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     const { error } = await supabase.auth.exchangeCodeForSession(code)
     if (!error) {
-      return NextResponse.redirect(`${siteUrl}${next}`)
+      return NextResponse.redirect(`${siteUrl}${safePath}`)
     }
   }
 
