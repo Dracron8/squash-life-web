@@ -6,9 +6,10 @@ export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
   const oauthError = searchParams.get('error')
+  const type = searchParams.get('type')
 
   // Validate next param — only allow same-origin relative paths (prevent open redirect)
-  const rawNext = searchParams.get('next') ?? '/dashboard'
+  const rawNext = searchParams.get('next') ?? (type === 'recovery' ? '/reset-password' : '/dashboard')
   const safePath = rawNext.startsWith('/') && !rawNext.startsWith('//') ? rawNext : '/dashboard'
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin

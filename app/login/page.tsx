@@ -15,6 +15,10 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [isLocalhost, setIsLocalhost] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
+  const [showForgot, setShowForgot] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -49,6 +53,20 @@ export default function LoginPage() {
       }
     } finally {
       setEmailLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setForgotLoading(true)
+    setError(null)
+    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback?next=/reset-password`
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, { redirectTo })
+    setForgotLoading(false)
+    if (error) {
+      setError(error.message)
+    } else {
+      setForgotSent(true)
     }
   }
 
@@ -103,6 +121,7 @@ export default function LoginPage() {
           </div>
 
           {/* ── Email / Password ── */}
+          {!showForgot ? (
           <form onSubmit={handleSignIn} className="space-y-3">
             <div>
               <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">
@@ -119,9 +138,18 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">
-                PASSWORD
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">
+                  PASSWORD
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgot(true); setForgotEmail(email); setError(null) }}
+                  className="text-[10px] text-[var(--sl-text-30)] hover:text-[var(--sl-accent)] tracking-widest transition"
+                >
+                  FORGOT?
+                </button>
+              </div>
               <input
                 type="password"
                 value={password}
@@ -154,6 +182,55 @@ export default function LoginPage() {
               CREATE ACCOUNT
             </button>
           </form>
+          ) : (
+          <div className="space-y-3">
+            {forgotSent ? (
+              <div className="text-center space-y-3">
+                <p className="text-[var(--sl-text)] text-sm">Check your inbox!</p>
+                <p className="text-[var(--sl-text-30)] text-xs">A password reset link was sent to <span className="text-[var(--sl-text)]">{forgotEmail}</span>.</p>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail('') }}
+                  className="w-full py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] font-semibold text-xs tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition"
+                >
+                  BACK TO SIGN IN
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} className="space-y-3">
+                <div>
+                  <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">
+                    ENTER YOUR EMAIL
+                  </label>
+                  <input
+                    type="email"
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    autoComplete="off"
+                    required
+                    className={inputCls}
+                  />
+                </div>
+                {error && <p className="text-red-400 text-xs">{error}</p>}
+                <button
+                  type="submit"
+                  disabled={forgotLoading}
+                  className="w-full py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {forgotLoading ? 'SENDING…' : 'SEND RESET LINK'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setShowForgot(false); setError(null) }}
+                  className="w-full py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] font-semibold text-xs tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition"
+                >
+                  BACK TO SIGN IN
+                </button>
+              </form>
+            )}
+          </div>
+          )}
 
           {/* ── Dev Bypass (localhost only) ── */}
           {isLocalhost && (
