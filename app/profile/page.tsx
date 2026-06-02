@@ -36,10 +36,10 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [gender, setGender] = useState('')
-  const [dob, setDob] = useState('')
   const [handedness, setHandedness] = useState('')
   const [usrRating, setUsrRating] = useState('')
   const [division, setDivision] = useState('')
+  // date_of_birth field pending DB column addition
   const [homeClub, setHomeClub] = useState('')
   const [noHomeClub, setNoHomeClub] = useState(false)
   const [clubQuery, setClubQuery] = useState('')
@@ -82,7 +82,7 @@ export default function ProfilePage() {
       // Override with any existing profile data
       const { data: profile } = await supabase
         .from('profiles')
-        .select('first_name, last_name, phone, gender, date_of_birth, handedness, usr_rating, division, home_club')
+        .select('first_name, last_name, phone, gender, handedness, usr_rating, division, home_club')
         .eq('id', user.id)
         .single()
 
@@ -94,6 +94,7 @@ export default function ProfilePage() {
         if (profile.date_of_birth) setDob(profile.date_of_birth)
         if (profile.handedness) setHandedness(profile.handedness)
         if (profile.usr_rating != null) setUsrRating(String(profile.usr_rating))
+
         if (profile.division) setDivision(profile.division)
         if (profile.home_club) setHomeClub(profile.home_club)
       }
@@ -123,7 +124,6 @@ export default function ProfilePage() {
       last_name: lastName.trim() || null,
       phone: phone.trim() || null,
       gender: gender || null,
-      date_of_birth: dob || null,
       handedness: handedness || null,
       usr_rating: usrRating ? parseFloat(usrRating) : null,
       division: division || null,
@@ -203,11 +203,6 @@ export default function ProfilePage() {
                 </select>
               </div>
             </div>
-            <div>
-              <label className={labelCls}>DATE OF BIRTH</label>
-              <input type="date" value={dob} onChange={e => setDob(e.target.value)} className={inputCls} />
-            </div>
-
             {/* Home Club */}
             <div ref={clubRef}>
               <label className={labelCls}>HOME CLUB</label>
