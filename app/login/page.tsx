@@ -112,7 +112,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                autoComplete="email"
+                autoComplete="off"
                 required
                 className={inputCls}
               />
@@ -126,6 +126,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
+                autoComplete="off"
                 required
                 className={inputCls}
               />

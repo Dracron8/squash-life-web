@@ -12,6 +12,31 @@ import CLUBS_RAW from '../../squash_clubs.json'
 interface Club { name: string; city: string; region: string; country: string }
 const CLUBS = CLUBS_RAW as Club[]
 
+// Maps full province/state name → abbreviation used in clubs JSON
+const PROVINCE_CODE: Record<string, string> = {
+  // Canada
+  Alberta: 'AB', 'British Columbia': 'BC', Manitoba: 'MB', 'New Brunswick': 'NB',
+  'Newfoundland and Labrador': 'NL', 'Nova Scotia': 'NS', 'Northwest Territories': 'NT',
+  Nunavut: 'NU', Ontario: 'ON', 'Prince Edward Island': 'PE', Quebec: 'QC',
+  Saskatchewan: 'SK', Yukon: 'YT',
+  // USA
+  Alabama: 'AL', Alaska: 'AK', Arizona: 'AZ', Arkansas: 'AR', California: 'CA',
+  Colorado: 'CO', Connecticut: 'CT', Delaware: 'DE', Florida: 'FL', Georgia: 'GA',
+  Hawaii: 'HI', Idaho: 'ID', Illinois: 'IL', Indiana: 'IN', Iowa: 'IA', Kansas: 'KS',
+  Kentucky: 'KY', Louisiana: 'LA', Maine: 'ME', Maryland: 'MD', Massachusetts: 'MA',
+  Michigan: 'MI', Minnesota: 'MN', Mississippi: 'MS', Missouri: 'MO', Montana: 'MT',
+  Nebraska: 'NE', Nevada: 'NV', 'New Hampshire': 'NH', 'New Jersey': 'NJ',
+  'New Mexico': 'NM', 'New York': 'NY', 'North Carolina': 'NC', 'North Dakota': 'ND',
+  Ohio: 'OH', Oklahoma: 'OK', Oregon: 'OR', Pennsylvania: 'PA', 'Rhode Island': 'RI',
+  'South Carolina': 'SC', 'South Dakota': 'SD', Tennessee: 'TN', Texas: 'TX',
+  Utah: 'UT', Vermont: 'VT', Virginia: 'VA', Washington: 'WA', 'West Virginia': 'WV',
+  Wisconsin: 'WI', Wyoming: 'WY',
+  // Australia
+  'Australian Capital Territory': 'ACT', 'New South Wales': 'NSW',
+  'Northern Territory': 'NT', Queensland: 'QLD', 'South Australia': 'SA',
+  Tasmania: 'TAS', Victoria: 'VIC', 'Western Australia': 'WA',
+}
+
 // ── Region data ──────────────────────────────────────────────────────────────
 
 const REGIONS: Record<string, string[]> = {
@@ -63,9 +88,15 @@ function ratingToDivision(r: number): string {
 
 // ── Shared styles ────────────────────────────────────────────────────────────
 
+// Step 1 — standard padding
 const inp = 'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
 const lbl = 'block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1'
 const sel = `${inp} cursor-pointer`
+
+// Step 2 — tighter padding to fit all fields without scrolling
+const inp2 = 'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-3 py-2 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
+const lbl2 = 'block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-0.5'
+const sel2 = `${inp2} cursor-pointer`
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -131,10 +162,24 @@ export default function SignupModal({ onClose }: Props) {
     minMatchCharLength: 1,
   }), [])
 
+  // Province-aware club list: matching province floats to top
   const clubResults = useMemo<Club[]>(() => {
-    if (!clubQuery.trim()) return CLUBS.slice(0, 10)
-    return fuse.search(clubQuery).slice(0, 10).map(r => r.item)
-  }, [clubQuery, fuse])
+    const code = PROVINCE_CODE[s2.province] ?? ''
+
+    const sortByProvince = (list: Club[]) => {
+      if (!code) return list
+      const local = list.filter(c => c.region === code)
+      const others = list.filter(c => c.region !== code)
+      return [...local, ...others]
+    }
+
+    if (!clubQuery.trim()) {
+      return sortByProvince(CLUBS).slice(0, 10)
+    }
+
+    const raw = fuse.search(clubQuery).map(r => r.item)
+    return sortByProvince(raw).slice(0, 10)
+  }, [clubQuery, fuse, s2.province])
 
   // Close club dropdown on outside click
   useEffect(() => {
@@ -298,27 +343,22 @@ export default function SignupModal({ onClose }: Props) {
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  // What to show in the club search input
-  const clubInputValue = clubOpen
-    ? clubQuery
-    : s2.noHomeClub ? '' : s2.homeClub
-
+  const clubInputValue = clubOpen ? clubQuery : (s2.noHomeClub ? '' : s2.homeClub)
   const clubInputPlaceholder = s2.noHomeClub
     ? 'No Home Club'
-    : s2.homeClub
-      ? s2.homeClub
-      : 'Search by club name or city…'
+    : s2.homeClub || 'Search by club name or city…'
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
+      className="fixed inset-0 z-50 flex items-center justify-center px-4 py-3"
       style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
     >
-      <div className="relative w-full max-w-lg bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
+      {/* max-h-[96vh] gives more room; body is still scrollable as last resort */}
+      <div className="relative w-full max-w-lg bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl shadow-2xl flex flex-col max-h-[96vh]">
 
         {/* Header */}
-        <div className="px-6 pt-5 pb-4 border-b border-[var(--sl-border)] shrink-0">
-          <div className="flex justify-center mb-4">
+        <div className="px-6 pt-4 pb-3 border-b border-[var(--sl-border)] shrink-0">
+          <div className="flex justify-center mb-2">
             <SiteLogo size="nav" />
           </div>
           <div className="flex items-center justify-between">
@@ -340,8 +380,8 @@ export default function SignupModal({ onClose }: Props) {
           </div>
         </div>
 
-        {/* Body — scrollable */}
-        <div className="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+        {/* Body */}
+        <div className="overflow-y-auto flex-1 px-6 py-3">
 
           {/* ── Email confirmed success ── */}
           {done ? (
@@ -403,12 +443,14 @@ export default function SignupModal({ onClose }: Props) {
 
           ) : (
 
-            /* ── STEP 2: Player Profile ── */
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
+            /* ── STEP 2: Player Profile — compact 3-col layout ── */
+            <div className="space-y-2.5">
+
+              {/* Row 1: Gender | Date of Birth | Handedness */}
+              <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className={lbl}>GENDER</label>
-                  <select value={s2.gender} onChange={set2sel('gender')} className={sel}>
+                  <label className={lbl2}>GENDER</label>
+                  <select value={s2.gender} onChange={set2sel('gender')} className={sel2}>
                     <option value="">Select…</option>
                     <option value="Male">Male</option>
                     <option value="Female">Female</option>
@@ -416,56 +458,52 @@ export default function SignupModal({ onClose }: Props) {
                   </select>
                 </div>
                 <div>
-                  <label className={lbl}>DATE OF BIRTH</label>
+                  <label className={lbl2}>DATE OF BIRTH</label>
                   <input type="date" value={s2.dob} onChange={set2inp('dob')}
-                    className={inp} style={{ colorScheme: 'dark' }} />
+                    className={inp2} style={{ colorScheme: 'dark' }} />
                 </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={lbl}>HANDEDNESS</label>
-                  <select value={s2.handedness} onChange={set2sel('handedness')} className={sel}>
+                  <label className={lbl2}>HANDEDNESS</label>
+                  <select value={s2.handedness} onChange={set2sel('handedness')} className={sel2}>
                     <option value="">Select…</option>
                     <option value="Right">Right</option>
                     <option value="Left">Left</option>
                   </select>
                 </div>
-                <div>
-                  <label className={lbl}>PHONE (OPTIONAL)</label>
-                  <input type="tel" value={s2.phone} onChange={set2inp('phone')}
-                    placeholder="+1 555 000 0000" autoComplete="tel" className={inp} />
-                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 2: Phone | Country | Province */}
+              <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className={lbl}>COUNTRY</label>
-                  <select value={s2.country} onChange={handleCountryChange} className={sel}>
+                  <label className={lbl2}>PHONE</label>
+                  <input type="tel" value={s2.phone} onChange={set2inp('phone')}
+                    placeholder="+1 555 …" autoComplete="tel" className={inp2} />
+                </div>
+                <div>
+                  <label className={lbl2}>COUNTRY</label>
+                  <select value={s2.country} onChange={handleCountryChange} className={sel2}>
                     {ALL_COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className={lbl}>{s2.country === 'United States' ? 'STATE' : 'PROVINCE / REGION'}</label>
+                  <label className={lbl2}>{s2.country === 'United States' ? 'STATE' : 'PROVINCE'}</label>
                   {provinces.length > 0 ? (
-                    <select value={s2.province} onChange={set2sel('province')} className={sel}>
+                    <select value={s2.province} onChange={set2sel('province')} className={sel2}>
                       <option value="">Select…</option>
                       {provinces.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                   ) : (
-                    <input type="text" value={s2.province}
-                      onChange={set2inp('province')}
-                      placeholder="Optional" className={inp} />
+                    <input type="text" value={s2.province} onChange={set2inp('province')}
+                      placeholder="Optional" className={inp2} />
                   )}
                 </div>
               </div>
 
-              {/* ── Home Club — searchable dropdown ── */}
+              {/* Home Club — searchable dropdown */}
               <div ref={clubRef}>
-                <label className={lbl}>HOME CLUB</label>
+                <label className={lbl2}>HOME CLUB</label>
 
                 {clubFreeText ? (
-                  /* Free text fallback */
                   <div>
                     <input
                       type="text"
@@ -473,18 +511,17 @@ export default function SignupModal({ onClose }: Props) {
                       onChange={set2inp('homeClub')}
                       placeholder="Enter your club name"
                       autoComplete="off"
-                      className={inp}
+                      className={inp2}
                     />
                     <button
                       type="button"
                       onClick={() => { setClubFreeText(false); setClubQuery(s2.homeClub); setClubOpen(true) }}
-                      className="text-[10px] text-[var(--sl-accent-60)] hover:text-[var(--sl-accent)] transition mt-1.5 block"
+                      className="text-[10px] text-[var(--sl-accent-60)] hover:text-[var(--sl-accent)] transition mt-1 block"
                     >
                       ← Search the list instead
                     </button>
                   </div>
                 ) : (
-                  /* Search mode */
                   <div>
                     <div className="relative">
                       <input
@@ -501,60 +538,56 @@ export default function SignupModal({ onClose }: Props) {
                         }}
                         placeholder={clubInputPlaceholder}
                         autoComplete="off"
-                        className={`${inp} pr-8 ${s2.noHomeClub ? 'text-[var(--sl-text-30)]' : ''}`}
+                        className={`${inp2} pr-7 ${s2.noHomeClub ? 'text-[var(--sl-text-30)]' : ''}`}
                       />
                       {(s2.homeClub || s2.noHomeClub) && !clubOpen && (
                         <button
                           type="button"
                           onClick={clearClub}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--sl-text-30)] hover:text-[var(--sl-text)] transition text-base leading-none"
-                          aria-label="Clear selection"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--sl-text-30)] hover:text-[var(--sl-text)] transition text-base leading-none"
+                          aria-label="Clear"
                         >
                           ×
                         </button>
                       )}
                     </div>
 
-                    {/* Dropdown — inline so modal scroll handles it */}
                     {clubOpen && (
                       <div className="mt-1 rounded-lg border border-[var(--sl-border)] bg-[var(--sl-surface-deep)] overflow-hidden">
-                        {/* No Home Club — top */}
+                        {/* No Home Club */}
                         <button
                           type="button"
                           onMouseDown={e => e.preventDefault()}
                           onClick={selectNoHomeClub}
-                          className="w-full text-left px-4 py-2.5 text-sm text-[var(--sl-text-40)] hover:bg-[var(--sl-surface-hover)] transition border-b border-[var(--sl-border)] flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 text-sm text-[var(--sl-text-40)] hover:bg-[var(--sl-surface-hover)] transition border-b border-[var(--sl-border)] flex items-center gap-2"
                         >
-                          <span className="text-[var(--sl-text-20)] font-bold">—</span>
-                          No Home Club
+                          <span className="text-[var(--sl-text-20)] font-bold">—</span> No Home Club
                         </button>
 
                         {/* Results */}
-                        <div className="max-h-44 overflow-y-auto">
-                          {clubResults.length > 0 ? (
-                            clubResults.map((club, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onMouseDown={e => e.preventDefault()}
-                                onClick={() => selectClub(club)}
-                                className="w-full text-left px-4 py-2.5 hover:bg-[var(--sl-surface-hover)] transition"
-                              >
-                                <span className="text-sm text-[var(--sl-text)]">{club.name}</span>
-                                <span className="text-xs text-[var(--sl-text-30)] ml-1.5">— {club.city}, {club.region}</span>
-                              </button>
-                            ))
-                          ) : (
-                            <p className="px-4 py-3 text-sm text-[var(--sl-text-30)]">No clubs found</p>
+                        <div className="max-h-36 overflow-y-auto">
+                          {clubResults.length > 0 ? clubResults.map((club, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              onMouseDown={e => e.preventDefault()}
+                              onClick={() => selectClub(club)}
+                              className="w-full text-left px-3 py-2 hover:bg-[var(--sl-surface-hover)] transition"
+                            >
+                              <span className="text-sm text-[var(--sl-text)]">{club.name}</span>
+                              <span className="text-xs text-[var(--sl-text-30)] ml-1.5">— {club.city}, {club.region}</span>
+                            </button>
+                          )) : (
+                            <p className="px-3 py-2.5 text-sm text-[var(--sl-text-30)]">No clubs found</p>
                           )}
                         </div>
 
-                        {/* My club isn't listed — bottom */}
+                        {/* Add custom */}
                         <button
                           type="button"
                           onMouseDown={e => e.preventDefault()}
                           onClick={selectFreeText}
-                          className="w-full text-left px-4 py-2.5 text-sm text-[var(--sl-accent-60)] hover:bg-[var(--sl-surface-hover)] hover:text-[var(--sl-accent)] transition border-t border-[var(--sl-border)]"
+                          className="w-full text-left px-3 py-2 text-sm text-[var(--sl-accent-60)] hover:bg-[var(--sl-surface-hover)] hover:text-[var(--sl-accent)] transition border-t border-[var(--sl-border)]"
                         >
                           + My club isn&apos;t listed — add it
                         </button>
@@ -564,23 +597,23 @@ export default function SignupModal({ onClose }: Props) {
                 )}
               </div>
 
-              {/* USR Rating + Division */}
-              <div className="grid grid-cols-2 gap-3">
+              {/* Row 3: USR / CL Rating | Division */}
+              <div className="grid grid-cols-2 gap-2">
                 <div>
-                  <label className={lbl}>USR / CL RATING (OPTIONAL)</label>
+                  <label className={lbl2}>USR / CL RATING (OPTIONAL)</label>
                   <input
                     type="number"
                     value={s2.usrRating}
                     onChange={handleRatingChange}
                     min={1.5} max={7.0} step={0.5}
                     placeholder="e.g. 4.0"
-                    className={inp}
+                    className={inp2}
                   />
-                  <p className="text-[9px] text-[var(--sl-text-20)] mt-1">Range: 1.5 – 7.0 in 0.5 steps</p>
+                  <p className="text-[9px] text-[var(--sl-text-20)] mt-0.5">1.5 – 7.0 in 0.5 steps</p>
                 </div>
                 <div>
-                  <label className={lbl}>DIVISION</label>
-                  <select value={s2.division} onChange={set2sel('division')} className={sel}>
+                  <label className={lbl2}>DIVISION</label>
+                  <select value={s2.division} onChange={set2sel('division')} className={sel2}>
                     <option value="">Select…</option>
                     {(['OPEN', 'A', 'B', 'C'] as const).map(d => (
                       <option key={d} value={d}>{d}</option>
@@ -588,66 +621,69 @@ export default function SignupModal({ onClose }: Props) {
                     <option value="D">D — Beginner</option>
                   </select>
                   {s2.usrRating && s2.division && (
-                    <p className="text-[9px] text-[var(--sl-accent-60)] mt-1">
-                      Auto-set from rating — you can override
+                    <p className="text-[9px] text-[var(--sl-accent-60)] mt-0.5">
+                      Auto-set — you can override
                     </p>
                   )}
                 </div>
               </div>
+
+              {/* Error */}
+              {error && !done && (
+                <p className="text-red-400 text-xs">{error}</p>
+              )}
+
+              {/* Checkboxes */}
+              <div className="space-y-1.5 pt-2 border-t border-[var(--sl-border)]">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={agreeToS} onChange={e => setAgreeToS(e.target.checked)}
+                    className="mt-0.5 shrink-0 accent-[var(--sl-accent)]" />
+                  <span className="text-[11px] text-[var(--sl-text-40)] leading-tight">
+                    I agree to the{' '}
+                    <span className="text-[var(--sl-accent)] underline">Terms of Service</span>
+                    {' '}<span className="text-[var(--sl-accent)]">*</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={agreePrivacy} onChange={e => setAgreePrivacy(e.target.checked)}
+                    className="mt-0.5 shrink-0 accent-[var(--sl-accent)]" />
+                  <span className="text-[11px] text-[var(--sl-text-40)] leading-tight">
+                    I agree to the{' '}
+                    <span className="text-[var(--sl-accent)] underline">Privacy Policy</span>
+                    {' '}<span className="text-[var(--sl-accent)]">*</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <input type="checkbox" checked={emailOptIn} onChange={e => setEmailOptIn(e.target.checked)}
+                    className="mt-0.5 shrink-0 accent-[var(--sl-accent)]" />
+                  <span className="text-[11px] text-[var(--sl-text-30)] leading-tight">
+                    Send me tournament announcements and updates (optional)
+                  </span>
+                </label>
+              </div>
             </div>
           )}
 
-          {/* Error */}
-          {error && !done && (
-            <p className="text-red-400 text-xs">{error}</p>
-          )}
-
-          {/* ── Checkboxes (step 2 only) ── */}
-          {step === 2 && !done && (
-            <div className="space-y-3 pt-2 border-t border-[var(--sl-border)]">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={agreeToS} onChange={e => setAgreeToS(e.target.checked)}
-                  className="mt-0.5 shrink-0 accent-[var(--sl-accent)]" />
-                <span className="text-[11px] text-[var(--sl-text-40)] leading-relaxed">
-                  I agree to the{' '}
-                  <span className="text-[var(--sl-accent)] underline cursor-pointer">Terms of Service</span>
-                  {' '}<span className="text-[var(--sl-accent)]">*</span>
-                </span>
-              </label>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={agreePrivacy} onChange={e => setAgreePrivacy(e.target.checked)}
-                  className="mt-0.5 shrink-0 accent-[var(--sl-accent)]" />
-                <span className="text-[11px] text-[var(--sl-text-40)] leading-relaxed">
-                  I agree to the{' '}
-                  <span className="text-[var(--sl-accent)] underline cursor-pointer">Privacy Policy</span>
-                  {' '}<span className="text-[var(--sl-accent)]">*</span>
-                </span>
-              </label>
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={emailOptIn} onChange={e => setEmailOptIn(e.target.checked)}
-                  className="mt-0.5 shrink-0 accent-[var(--sl-accent)]" />
-                <span className="text-[11px] text-[var(--sl-text-30)] leading-relaxed">
-                  Send me tournament announcements and updates (optional)
-                </span>
-              </label>
-            </div>
+          {/* Error for step 1 */}
+          {step === 1 && error && !done && (
+            <p className="text-red-400 text-xs mt-3">{error}</p>
           )}
         </div>
 
         {/* Footer */}
         {!done && (
-          <div className="px-6 pb-6 pt-4 border-t border-[var(--sl-border)] shrink-0">
+          <div className="px-6 pb-4 pt-3 border-t border-[var(--sl-border)] shrink-0">
             {step === 1 ? (
               <div className="flex gap-3">
                 <button
                   onClick={handleClose}
-                  className="flex-1 py-3 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] text-xs font-semibold tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition"
+                  className="flex-1 py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] text-xs font-semibold tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition"
                 >
                   CANCEL
                 </button>
                 <button
                   onClick={handleNext}
-                  className="flex-[2] py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+                  className="flex-[2] py-2.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
                 >
                   NEXT: PROFILE →
                 </button>
@@ -657,14 +693,14 @@ export default function SignupModal({ onClose }: Props) {
                 <button
                   onClick={() => { setStep(1); setError(null) }}
                   disabled={loading}
-                  className="flex-1 py-3 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] text-xs font-semibold tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] text-xs font-semibold tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition disabled:opacity-50"
                 >
                   ← BACK
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="flex-[2] py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-[2] py-2.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'CREATING ACCOUNT…' : 'SIGN UP'}
                 </button>
