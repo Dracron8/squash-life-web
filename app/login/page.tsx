@@ -5,13 +5,16 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import ThemeToggle from '@/app/components/ThemeToggle'
 import SiteLogo from '@/app/components/SiteLogo'
+import SignupModal from '@/app/components/SignupModal'
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [emailLoading, setEmailLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
   const [isLocalhost, setIsLocalhost] = useState(false)
+  const [showSignup, setShowSignup] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
@@ -20,44 +23,36 @@ export default function LoginPage() {
   }, [])
 
   const handleGoogleLogin = async () => {
-    setLoading(true)
+    setGoogleLoading(true)
     setError(null)
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback` },
-    })
+    try {
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback` },
+      })
+    } catch {
+      setGoogleLoading(false)
+    }
   }
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    setEmailLoading(true)
     setError(null)
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      router.push('/dashboard')
-    }
-  }
-
-  const handleSignUp = async () => {
-    if (!email || !password) {
-      setError('Enter an email and password first.')
-      return
-    }
-    setLoading(true)
-    setError(null)
-    const { error } = await supabase.auth.signUp({ email, password })
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      router.push('/dashboard')
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError(error.message)
+      } else {
+        router.push('/dashboard')
+      }
+    } finally {
+      setEmailLoading(false)
     }
   }
 
   const handleDevBypass = () => {
+    setEmailLoading(true)
     localStorage.setItem('devMode', 'true')
     router.push('/dashboard')
   }
@@ -65,6 +60,7 @@ export default function LoginPage() {
   const inputCls = 'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
 
   return (
+    <>
     <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center px-6 py-12">
       {/* Theme toggle pinned top-right */}
       <div className="fixed top-4 right-4">
@@ -85,7 +81,7 @@ export default function LoginPage() {
           <div>
             <button
               onClick={handleGoogleLogin}
-              disabled={loading}
+              disabled={googleLoading || emailLoading}
               className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold py-3 px-6 rounded-xl border border-gray-200 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 48 48">
@@ -94,7 +90,7 @@ export default function LoginPage() {
                 <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
                 <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
               </svg>
-              {loading ? 'Redirecting…' : 'Continue with Google'}
+              {googleLoading ? 'Redirecting…' : 'Continue with Google'}
             </button>
           </div>
 
@@ -116,6 +112,7 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
                 required
                 className={inputCls}
               />
@@ -140,16 +137,16 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={emailLoading || googleLoading}
               className="w-full py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed mt-1"
             >
-              SIGN IN
+              {emailLoading ? 'SIGNING IN…' : 'SIGN IN'}
             </button>
 
             <button
               type="button"
-              onClick={handleSignUp}
-              disabled={loading}
+              onClick={() => setShowSignup(true)}
+              disabled={emailLoading || googleLoading}
               className="w-full py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] font-semibold text-xs tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition disabled:opacity-50"
             >
               CREATE ACCOUNT
@@ -175,5 +172,8 @@ export default function LoginPage() {
         </div>
       </div>
     </main>
+
+    {showSignup && <SignupModal onClose={() => setShowSignup(false)} />}
+    </>
   )
 }
