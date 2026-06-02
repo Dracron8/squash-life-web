@@ -92,10 +92,6 @@ export default function RegisterPage() {
   const [sweaterSize, setSweaterSize] = useState('')
   const [trackpantSize, setTrackpantSize] = useState('')
 
-  // Section 5 — Save info
-  const [saveInfo, setSaveInfo] = useState(false)
-  const [password, setPassword] = useState('')
-
   // Submission
   const [error, setError] = useState<string | null>(null)
 
@@ -177,7 +173,6 @@ export default function RegisterPage() {
     lastName.trim().length > 0 &&
     email.trim().length > 0 &&
     assignedDivision !== null &&
-    (!saveInfo || password.length >= 6) &&
     (!tournament?.has_clothing || (tshirtSize !== '' && sweaterSize !== '' && trackpantSize !== ''))
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -438,48 +433,8 @@ export default function RegisterPage() {
             </Section>
           )}
 
-          {/* ── Section 5: Save for next time ── */}
-          <Section n={tournament?.has_clothing ? 5 : 4} title="SAVE FOR NEXT TIME">
-            <label className="flex items-start gap-3 cursor-pointer select-none mb-4">
-              <div
-                onClick={() => setSaveInfo(!saveInfo)}
-                className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 transition ${
-                  saveInfo
-                    ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)]'
-                    : 'border-[var(--sl-text-20)] bg-transparent'
-                }`}
-              >
-                {saveInfo && <span className="text-[var(--sl-btn-text)] text-xs font-bold">✓</span>}
-              </div>
-              <div>
-                <span className="text-sm text-[var(--sl-text-60)]">Save my info for future tournaments</span>
-                <p className="text-[var(--sl-text-30)] text-xs mt-0.5">Creates a SQSH.LIFE account linked to your email</p>
-              </div>
-            </label>
-
-            {saveInfo && (
-              <div>
-                <label className={labelCls}>CREATE PASSWORD <span className="text-red-400">*</span></label>
-                <input
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimum 6 characters"
-                  className={inputCls}
-                />
-                {saveInfo && password.length > 0 && password.length < 6 && (
-                  <p className="text-red-400 text-xs mt-1">Password must be at least 6 characters</p>
-                )}
-              </div>
-            )}
-
-            {!saveInfo && (
-              <p className="text-[var(--sl-text-20)] text-xs">Continuing as guest — no account will be created.</p>
-            )}
-          </Section>
-
-          {/* ── Section 6: Summary + Payment ── */}
-          <Section n={tournament?.has_clothing ? 6 : 5} title="SUMMARY">
+          {/* ── Summary + Payment ── */}
+          <Section n={tournament?.has_clothing ? 5 : 4} title="SUMMARY">
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--sl-text-40)]">Name</span>
