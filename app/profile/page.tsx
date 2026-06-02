@@ -1,11 +1,16 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import Fuse from 'fuse.js'
 import ThemeToggle from '@/app/components/ThemeToggle'
 import SiteLogo from '@/app/components/SiteLogo'
+import CLUBS_RAW from '../../squash_clubs.json'
+
+interface Club { name: string; city: string; region: string; country: string }
+const CLUBS = CLUBS_RAW as Club[]
 
 function ratingToDivision(r: number): string {
   if (r >= 5.5) return 'OPEN'
@@ -35,6 +40,32 @@ export default function ProfilePage() {
   const [handedness, setHandedness] = useState('')
   const [usrRating, setUsrRating] = useState('')
   const [division, setDivision] = useState('')
+  const [homeClub, setHomeClub] = useState('')
+  const [noHomeClub, setNoHomeClub] = useState(false)
+  const [clubQuery, setClubQuery] = useState('')
+  const [clubOpen, setClubOpen] = useState(false)
+  const [clubFreeText, setClubFreeText] = useState(false)
+  const clubRef = useRef<HTMLDivElement>(null)
+
+  const fuse = useMemo(() => new Fuse(CLUBS, { keys: ['name', 'city'], threshold: 0.4, minMatchCharLength: 1 }), [])
+
+  const clubResults = useMemo<Club[]>(() => {
+    if (!clubQuery.trim()) return CLUBS.slice(0, 10)
+    return fuse.search(clubQuery).map(r => r.item).slice(0, 10)
+  }, [clubQuery, fuse])
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (clubRef.current && !clubRef.current.contains(e.target as Node)) setClubOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const selectClub = (club: Club) => { setHomeClub(club.name); setNoHomeClub(false); setClubOpen(false) }
+  const selectNoHomeClub = () => { setHomeClub(''); setNoHomeClub(true); setClubOpen(false) }
+  const selectFreeText = () => { setClubFreeText(true); setClubOpen(false) }
+  const clearClub = () => { setHomeClub(''); setNoHomeClub(false); setClubQuery('') }
 
   useEffect(() => {
     async function load() {
@@ -51,7 +82,7 @@ export default function ProfilePage() {
       // Override with any existing profile data
       const { data: profile } = await supabase
         .from('profiles')
-        .select('first_name, last_name, phone, gender, date_of_birth, handedness, usr_rating, division')
+        .select('first_name, last_name, phone, gender, date_of_birth, handedness, usr_rating, division, home_club')
         .eq('id', user.id)
         .single()
 
@@ -64,6 +95,7 @@ export default function ProfilePage() {
         if (profile.handedness) setHandedness(profile.handedness)
         if (profile.usr_rating != null) setUsrRating(String(profile.usr_rating))
         if (profile.division) setDivision(profile.division)
+        if (profile.home_club) setHomeClub(profile.home_club)
       }
 
       setLoading(false)
@@ -95,6 +127,7 @@ export default function ProfilePage() {
       handedness: handedness || null,
       usr_rating: usrRating ? parseFloat(usrRating) : null,
       division: division || null,
+      home_club: noHomeClub ? null : (homeClub.trim() || null),
       updated_at: new Date().toISOString(),
     })
 
@@ -173,6 +206,69 @@ export default function ProfilePage() {
             <div>
               <label className={labelCls}>DATE OF BIRTH</label>
               <input type="date" value={dob} onChange={e => setDob(e.target.value)} className={inputCls} />
+            </div>
+
+            {/* Home Club */}
+            <div ref={clubRef}>
+              <label className={labelCls}>HOME CLUB</label>
+              {clubFreeText ? (
+                <div>
+                  <input
+                    type="text"
+                    value={homeClub}
+                    onChange={e => setHomeClub(e.target.value)}
+                    placeholder="Enter your club name"
+                    autoComplete="off"
+                    className={inputCls}
+                  />
+                  <button type="button" onClick={() => { setClubFreeText(false); setClubQuery(homeClub); setClubOpen(true) }}
+                    className="text-[10px] text-[var(--sl-accent-60)] hover:text-[var(--sl-accent)] transition mt-1 block">
+                    ← Search the list instead
+                  </button>
+                </div>
+              ) : (
+                <div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={clubOpen ? clubQuery : (noHomeClub ? '' : homeClub)}
+                      onChange={e => { setClubQuery(e.target.value); setClubOpen(true); setHomeClub(''); setNoHomeClub(false) }}
+                      onFocus={() => { setClubQuery(noHomeClub ? '' : homeClub); setClubOpen(true) }}
+                      placeholder={noHomeClub ? 'No Home Club' : homeClub || 'Search by club name or city…'}
+                      autoComplete="off"
+                      className={`${inputCls} pr-7 ${noHomeClub ? 'text-[var(--sl-text-30)]' : ''}`}
+                    />
+                    {(homeClub || noHomeClub) && !clubOpen && (
+                      <button type="button" onClick={clearClub}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--sl-text-30)] hover:text-[var(--sl-text)] transition text-base leading-none"
+                        aria-label="Clear">×</button>
+                    )}
+                  </div>
+                  {clubOpen && (
+                    <div className="mt-1 rounded-lg border border-[var(--sl-border)] bg-[var(--sl-surface-deep)] overflow-hidden z-10 relative">
+                      <button type="button" onMouseDown={e => e.preventDefault()} onClick={selectNoHomeClub}
+                        className="w-full text-left px-3 py-2 text-sm text-[var(--sl-text-40)] hover:bg-[var(--sl-surface-hover)] transition border-b border-[var(--sl-border)] flex items-center gap-2">
+                        <span className="text-[var(--sl-text-20)] font-bold">—</span> No Home Club
+                      </button>
+                      <div className="max-h-40 overflow-y-auto">
+                        {clubResults.length > 0 ? clubResults.map((club, i) => (
+                          <button key={i} type="button" onMouseDown={e => e.preventDefault()} onClick={() => selectClub(club)}
+                            className="w-full text-left px-3 py-2 hover:bg-[var(--sl-surface-hover)] transition">
+                            <span className="text-sm text-[var(--sl-text)]">{club.name}</span>
+                            <span className="text-xs text-[var(--sl-text-30)] ml-1.5">— {club.city}, {club.region}</span>
+                          </button>
+                        )) : (
+                          <p className="px-3 py-2.5 text-sm text-[var(--sl-text-30)]">No clubs found</p>
+                        )}
+                      </div>
+                      <button type="button" onMouseDown={e => e.preventDefault()} onClick={selectFreeText}
+                        className="w-full text-left px-3 py-2 text-sm text-[var(--sl-accent-60)] hover:bg-[var(--sl-surface-hover)] hover:text-[var(--sl-accent)] transition border-t border-[var(--sl-border)]">
+                        + My club isn&apos;t listed — add it
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 
