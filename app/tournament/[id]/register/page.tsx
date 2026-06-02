@@ -135,17 +135,26 @@ export default function RegisterPage() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return
       if (user.email) setEmail(user.email)
+
       const { data: profile } = await supabase
         .from('profiles')
         .select('first_name, last_name, phone, usr_rating, division')
         .eq('id', user.id)
         .single()
+
       if (profile) {
         if (profile.first_name) setFirstName(profile.first_name)
         if (profile.last_name) setLastName(profile.last_name)
         if (profile.phone) setPhone(profile.phone)
         if (profile.usr_rating != null) setRating(String(profile.usr_rating))
         if (profile.division) setSelectedDivision(profile.division)
+      } else {
+        // Google OAuth users — fall back to auth metadata
+        const meta = user.user_metadata ?? {}
+        if (meta.given_name) setFirstName(meta.given_name)
+        else if (meta.full_name) setFirstName(meta.full_name.split(' ')[0] ?? '')
+        if (meta.family_name) setLastName(meta.family_name)
+        else if (meta.full_name) setLastName(meta.full_name.split(' ').slice(1).join(' '))
       }
     })
   }, [])
