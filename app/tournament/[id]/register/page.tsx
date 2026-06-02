@@ -130,13 +130,15 @@ export default function RegisterPage() {
       if (user.email) setEmail(user.email)
       const { data: profile } = await supabase
         .from('profiles')
-        .select('first_name, last_name, phone')
+        .select('first_name, last_name, phone, usr_rating, division')
         .eq('id', user.id)
         .single()
       if (profile) {
         if (profile.first_name) setFirstName(profile.first_name)
         if (profile.last_name) setLastName(profile.last_name)
         if (profile.phone) setPhone(profile.phone)
+        if (profile.usr_rating != null) setRating(String(profile.usr_rating))
+        if (profile.division) setSelectedDivision(profile.division)
       }
     })
   }, [])
