@@ -40,15 +40,33 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
-      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/">
-          <SiteLogo />
-        </Link>
-        <div className="flex items-center gap-4">
+      <header
+        className="border-b border-[var(--sl-border)] px-6 py-5 grid grid-cols-3 items-center"
+        style={{ backgroundColor: 'var(--sl-bg)' }}
+      >
+        {/* Left — SIGN IN */}
+        <div className="flex items-center justify-start">
+          <Link
+            href="/login"
+            className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
+          >
+            SIGN IN
+          </Link>
+        </div>
+
+        {/* Center — Logo (2× nav size) */}
+        <div className="flex justify-center">
+          <Link href="/">
+            <SiteLogo size="navLarge" />
+          </Link>
+        </div>
+
+        {/* Right — ThemeToggle + SIGN IN */}
+        <div className="flex items-center justify-end gap-3">
           <ThemeToggle />
           <Link
             href="/login"
-            className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-4 py-2 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
+            className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
           >
             SIGN IN
           </Link>

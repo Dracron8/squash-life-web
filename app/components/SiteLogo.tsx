@@ -7,20 +7,24 @@
  */
 
 interface Props {
-  /** 'nav' = 40px tall (headers), 'hero' = 56px tall (login page) */
-  size?: 'nav' | 'hero'
+  /** 'nav' = 36px img / text-2xl, 'navLarge' = 72px img / text-5xl (2×nav), 'hero' = 52px img / text-4xl */
+  size?: 'nav' | 'navLarge' | 'hero'
 }
 
 export default function SiteLogo({ size = 'nav' }: Props) {
   const textCls =
-    size === 'hero'
-      ? 'text-4xl font-bold tracking-widest'
-      : 'text-2xl font-bold tracking-widest'
+    size === 'navLarge'
+      ? 'text-5xl font-bold tracking-widest'
+      : size === 'hero'
+        ? 'text-4xl font-bold tracking-widest'
+        : 'text-2xl font-bold tracking-widest'
 
   const imgStyle =
-    size === 'hero'
-      ? { height: '52px', width: 'auto' }
-      : { height: '36px', width: 'auto' }
+    size === 'navLarge'
+      ? { height: '72px', width: 'auto' }
+      : size === 'hero'
+        ? { height: '52px', width: 'auto' }
+        : { height: '36px', width: 'auto' }
 
   return (
     <>
