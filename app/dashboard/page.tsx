@@ -158,6 +158,22 @@ export default function DashboardPage() {
           )}
         </div>
 
+        {/* Complete profile banner — shown for Google users with no squash profile */}
+        {!player && !isDevMode && (
+          <div className="mb-8 bg-[var(--sl-accent-05)] border border-[var(--sl-accent-20)] rounded-2xl p-5 flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold tracking-widest text-[var(--sl-accent)] mb-1">COMPLETE YOUR PROFILE</p>
+              <p className="text-[var(--sl-text-50)] text-sm">Add your Club Locker rating and squash details so tournament registration is instant.</p>
+            </div>
+            <Link
+              href="/profile"
+              className="shrink-0 text-xs font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] px-4 py-2.5 rounded-xl hover:bg-[var(--sl-accent-hover)] transition"
+            >
+              SET UP →
+            </Link>
+          </div>
+        )}
+
         {/* Upcoming matches */}
         <div className="mb-10">
           <h2 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-4">Upcoming Matches</h2>
