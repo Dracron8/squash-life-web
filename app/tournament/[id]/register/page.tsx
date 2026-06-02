@@ -122,11 +122,22 @@ export default function RegisterPage() {
       })
   }, [id])
 
-  // Pre-fill email if logged in
+  // Pre-fill from profile if logged in
   useEffect(() => {
     const supabase = createClient()
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      if (user?.email) setEmail(user.email)
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return
+      if (user.email) setEmail(user.email)
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('first_name, last_name, phone')
+        .eq('id', user.id)
+        .single()
+      if (profile) {
+        if (profile.first_name) setFirstName(profile.first_name)
+        if (profile.last_name) setLastName(profile.last_name)
+        if (profile.phone) setPhone(profile.phone)
+      }
     })
   }, [])
 
