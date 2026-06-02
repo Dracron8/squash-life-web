@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
+import SiteLogo from '@/app/components/SiteLogo'
 
 // ── Region data ──────────────────────────────────────────────────────────────
 
@@ -91,7 +92,6 @@ interface Props {
 export default function SignupModal({ onClose }: Props) {
   const router = useRouter()
   const supabase = createClient()
-  const overlayRef = useRef<HTMLDivElement>(null)
 
   const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
@@ -242,30 +242,35 @@ export default function SignupModal({ onClose }: Props) {
 
   return (
     <div
-      ref={overlayRef}
       className="fixed inset-0 z-50 flex items-center justify-center px-4 py-6"
       style={{ backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
-      onClick={(e) => { if (e.target === overlayRef.current) handleClose() }}
     >
       <div className="relative w-full max-w-lg bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl shadow-2xl flex flex-col max-h-[90vh]">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[var(--sl-border)] shrink-0">
-          <div>
-            <h2 className="text-base font-bold tracking-widest text-[var(--sl-text)]">CREATE ACCOUNT</h2>
-            {!done && (
-              <p className="text-[10px] tracking-widest text-[var(--sl-text-30)] mt-0.5">
-                STEP {step} OF 2 — {step === 1 ? 'ACCOUNT' : 'PLAYER PROFILE'}
-              </p>
-            )}
+        <div className="px-6 pt-5 pb-4 border-b border-[var(--sl-border)] shrink-0">
+          {/* Logo — centered, nav size (~half the navbar navLarge) */}
+          <div className="flex justify-center mb-4">
+            <SiteLogo size="nav" />
           </div>
-          <button
-            onClick={handleClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--sl-text-40)] hover:text-[var(--sl-text)] hover:bg-[var(--sl-surface-hover)] transition text-lg leading-none"
-            aria-label="Close"
-          >
-            ×
-          </button>
+          {/* Title row */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold tracking-widest text-[var(--sl-text)]">CREATE ACCOUNT</h2>
+              {!done && (
+                <p className="text-[10px] tracking-widest text-[var(--sl-text-30)] mt-0.5">
+                  STEP {step} OF 2 — {step === 1 ? 'ACCOUNT' : 'PLAYER PROFILE'}
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handleClose}
+              className="w-8 h-8 flex items-center justify-center rounded-lg text-[var(--sl-text-40)] hover:text-[var(--sl-text)] hover:bg-[var(--sl-surface-hover)] transition text-lg leading-none"
+              aria-label="Close"
+            >
+              ×
+            </button>
+          </div>
         </div>
 
         {/* Body — scrollable */}
@@ -413,7 +418,7 @@ export default function SignupModal({ onClose }: Props) {
               {/* USR Rating + Division */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className={lbl}>USR RATING (OPTIONAL)</label>
+                  <label className={lbl}>USR / CL RATING (OPTIONAL)</label>
                   <input
                     type="number"
                     value={s2.usrRating}
@@ -428,9 +433,10 @@ export default function SignupModal({ onClose }: Props) {
                   <label className={lbl}>DIVISION</label>
                   <select value={s2.division} onChange={set2sel('division')} className={sel}>
                     <option value="">Select…</option>
-                    {['OPEN', 'A', 'B', 'C', 'D'].map(d => (
+                    {(['OPEN', 'A', 'B', 'C'] as const).map(d => (
                       <option key={d} value={d}>{d}</option>
                     ))}
+                    <option value="D">D — Beginner</option>
                   </select>
                   {s2.usrRating && s2.division && (
                     <p className="text-[9px] text-[var(--sl-accent-60)] mt-1">
