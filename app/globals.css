@@ -5,40 +5,8 @@
   --font-mono: var(--font-geist-mono);
 }
 
-/* ── Dark theme (default) ──────────────────────────────────────────────── */
+/* ── Light theme (default) — official SQSH.LIFE branding ───────────────── */
 :root {
-  --sl-bg: #0d0d0d;
-  --sl-surface: #1a1a1a;
-  --sl-surface-deep: #111111;
-  --sl-surface-hover: #1f1f1f;
-  --sl-text: #ffffff;
-  --sl-text-80: rgba(255, 255, 255, 0.8);
-  --sl-text-60: rgba(255, 255, 255, 0.6);
-  --sl-text-50: rgba(255, 255, 255, 0.5);
-  --sl-text-40: rgba(255, 255, 255, 0.4);
-  --sl-text-30: rgba(255, 255, 255, 0.3);
-  --sl-text-25: rgba(255, 255, 255, 0.25);
-  --sl-text-20: rgba(255, 255, 255, 0.2);
-  --sl-text-10: rgba(255, 255, 255, 0.1);
-  --sl-accent: #d4af37;
-  --sl-accent-hover: #c9a84c;
-  --sl-accent-80: rgba(212, 175, 55, 0.8);
-  --sl-accent-60: rgba(212, 175, 55, 0.6);
-  --sl-accent-40: rgba(212, 175, 55, 0.4);
-  --sl-accent-30: rgba(212, 175, 55, 0.3);
-  --sl-accent-20: rgba(212, 175, 55, 0.2);
-  --sl-accent-15: rgba(212, 175, 55, 0.15);
-  --sl-accent-10: rgba(212, 175, 55, 0.1);
-  --sl-accent-05: rgba(212, 175, 55, 0.05);
-  --sl-border: rgba(255, 255, 255, 0.1);
-  --sl-border-faint: rgba(255, 255, 255, 0.05);
-  --sl-btn-text: #000000;
-  --sl-mobile-bar: rgba(13, 13, 13, 0.95);
-  --sl-progress-track: rgba(255, 255, 255, 0.05);
-}
-
-/* ── Light theme — official SQSH.LIFE branding ──────────────────────────── */
-[data-theme="light"] {
   --sl-bg: #ffffff;
   --sl-surface: #f3f3f3;
   --sl-surface-deep: #e8e8e8;
@@ -69,24 +37,60 @@
   --sl-progress-track: rgba(0, 0, 0, 0.05);
 }
 
+/* ── Dark theme ─────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --sl-bg: #0d0d0d;
+  --sl-surface: #1a1a1a;
+  --sl-surface-deep: #111111;
+  --sl-surface-hover: #1f1f1f;
+  --sl-text: #ffffff;
+  --sl-text-80: rgba(255, 255, 255, 0.8);
+  --sl-text-60: rgba(255, 255, 255, 0.6);
+  --sl-text-50: rgba(255, 255, 255, 0.5);
+  --sl-text-40: rgba(255, 255, 255, 0.4);
+  --sl-text-30: rgba(255, 255, 255, 0.3);
+  --sl-text-25: rgba(255, 255, 255, 0.25);
+  --sl-text-20: rgba(255, 255, 255, 0.2);
+  --sl-text-10: rgba(255, 255, 255, 0.1);
+  --sl-accent: #d4af37;
+  --sl-accent-hover: #c9a84c;
+  --sl-accent-80: rgba(212, 175, 55, 0.8);
+  --sl-accent-60: rgba(212, 175, 55, 0.6);
+  --sl-accent-40: rgba(212, 175, 55, 0.4);
+  --sl-accent-30: rgba(212, 175, 55, 0.3);
+  --sl-accent-20: rgba(212, 175, 55, 0.2);
+  --sl-accent-15: rgba(212, 175, 55, 0.15);
+  --sl-accent-10: rgba(212, 175, 55, 0.1);
+  --sl-accent-05: rgba(212, 175, 55, 0.05);
+  --sl-border: rgba(255, 255, 255, 0.1);
+  --sl-border-faint: rgba(255, 255, 255, 0.05);
+  --sl-btn-text: #000000;
+  --sl-mobile-bar: rgba(13, 13, 13, 0.95);
+  --sl-progress-track: rgba(255, 255, 255, 0.05);
+}
+
 body {
   background-color: var(--sl-bg);
   color: var(--sl-text);
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Light theme uses Assistant font (SQSH.LIFE brand) */
-[data-theme="light"] body,
-[data-theme="light"] h1,
-[data-theme="light"] h2,
-[data-theme="light"] h3,
-[data-theme="light"] h4,
-[data-theme="light"] h5,
-[data-theme="light"] h6,
-[data-theme="light"] button,
-[data-theme="light"] input,
-[data-theme="light"] label {
+/* Light theme (default) uses Assistant font (SQSH.LIFE brand) */
+body, h1, h2, h3, h4, h5, h6, button, input, label {
   font-family: 'Assistant', sans-serif;
+}
+
+[data-theme="dark"] body,
+[data-theme="dark"] h1,
+[data-theme="dark"] h2,
+[data-theme="dark"] h3,
+[data-theme="dark"] h4,
+[data-theme="dark"] h5,
+[data-theme="dark"] h6,
+[data-theme="dark"] button,
+[data-theme="dark"] input,
+[data-theme="dark"] label {
+  font-family: Arial, Helvetica, sans-serif;
 }
 
 /* Inputs / placeholders inherit theme */
@@ -100,9 +104,9 @@ input[type="checkbox"] {
   accent-color: var(--sl-accent);
 }
 
-/* ── Logo: text in dark, image in light ─────────────────────────────────── */
-.sl-logo-text { display: inline; }
-.sl-logo-img  { display: none; }
+/* ── Logo: image in light (default), text in dark ───────────────────────── */
+.sl-logo-text { display: none; }
+.sl-logo-img  { display: inline-block; vertical-align: middle; }
 
-[data-theme="light"] .sl-logo-text { display: none; }
-[data-theme="light"] .sl-logo-img  { display: inline-block; vertical-align: middle; }
+[data-theme="dark"] .sl-logo-text { display: inline; }
+[data-theme="dark"] .sl-logo-img  { display: none; }
