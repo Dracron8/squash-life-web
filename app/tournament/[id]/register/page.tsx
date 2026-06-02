@@ -34,6 +34,7 @@ type TournamentInfo = {
   doubles_fee: number | null
   has_singles: boolean
   has_doubles: boolean
+  has_clothing: boolean
 }
 
 type EventType = 'singles' | 'doubles' | 'both'
@@ -86,7 +87,12 @@ export default function RegisterPage() {
   // Section 3 — Event type
   const [eventType, setEventType] = useState<EventType>('singles')
 
-  // Section 4 — Save info
+  // Section 4 — Clothing sizes (shown when tournament has_clothing)
+  const [tshirtSize, setTshirtSize] = useState('')
+  const [sweaterSize, setSweaterSize] = useState('')
+  const [trackpantSize, setTrackpantSize] = useState('')
+
+  // Section 5 — Save info
   const [saveInfo, setSaveInfo] = useState(false)
   const [password, setPassword] = useState('')
 
@@ -99,7 +105,7 @@ export default function RegisterPage() {
     const supabase = createClient()
     supabase
       .from('tournaments')
-      .select('id, name, tournament_details(singles_fee, doubles_fee, has_singles_draw, has_doubles_draw)')
+      .select('id, name, tournament_details(singles_fee, doubles_fee, has_singles_draw, has_doubles_draw, has_clothing)')
       .eq('id', id)
       .single()
       .then(({ data }) => {
@@ -115,6 +121,7 @@ export default function RegisterPage() {
             doubles_fee: d?.doubles_fee ?? null,
             has_singles: hasSingles,
             has_doubles: hasDoubles,
+            has_clothing: d?.has_clothing ?? false,
           })
           setEventType(hasSingles ? 'singles' : 'doubles')
         }
@@ -161,7 +168,8 @@ export default function RegisterPage() {
     lastName.trim().length > 0 &&
     email.trim().length > 0 &&
     assignedDivision !== null &&
-    (!saveInfo || password.length >= 6)
+    (!saveInfo || password.length >= 6) &&
+    (!tournament?.has_clothing || (tshirtSize !== '' && sweaterSize !== '' && trackpantSize !== ''))
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
@@ -172,7 +180,9 @@ export default function RegisterPage() {
       setError('Please complete all required fields.')
       return
     }
-    alert('Payment coming soon — your registration will be confirmed after Stripe integration is complete.')
+    // TODO: Stripe payment integration
+    // After payment confirmed, redirect to apparel store
+    window.location.href = 'https://www.sqsh.life/collections/all'
   }
 
   // ── Loading state ─────────────────────────────────────────────────────────
@@ -395,8 +405,32 @@ export default function RegisterPage() {
             </Section>
           )}
 
-          {/* ── Section 4: Save for next time ── */}
-          <Section n={4} title="SAVE FOR NEXT TIME">
+          {/* ── Section 4: Clothing Sizes (if tournament includes clothing) ── */}
+          {tournament?.has_clothing && (
+            <Section n={4} title="CLOTHING SIZES">
+              <p className="text-[var(--sl-text-30)] text-xs mb-4">
+                Your entry includes custom SQSH.LIFE apparel. Select your sizes below.
+              </p>
+              {(['T-SHIRT', 'SWEATER', 'TRACKPANT'] as const).map((item) => {
+                const val = item === 'T-SHIRT' ? tshirtSize : item === 'SWEATER' ? sweaterSize : trackpantSize
+                const setter = item === 'T-SHIRT' ? setTshirtSize : item === 'SWEATER' ? setSweaterSize : setTrackpantSize
+                return (
+                  <div key={item} className="mb-3">
+                    <label className={labelCls}>{item} SIZE <span className="text-red-400">*</span></label>
+                    <select value={val} onChange={e => setter(e.target.value)} className={inputCls}>
+                      <option value="">Select size…</option>
+                      {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                )
+              })}
+            </Section>
+          )}
+
+          {/* ── Section 5: Save for next time ── */}
+          <Section n={tournament?.has_clothing ? 5 : 4} title="SAVE FOR NEXT TIME">
             <label className="flex items-start gap-3 cursor-pointer select-none mb-4">
               <div
                 onClick={() => setSaveInfo(!saveInfo)}
@@ -435,8 +469,8 @@ export default function RegisterPage() {
             )}
           </Section>
 
-          {/* ── Section 5: Summary + Payment ── */}
-          <Section n={5} title="SUMMARY">
+          {/* ── Section 6: Summary + Payment ── */}
+          <Section n={tournament?.has_clothing ? 6 : 5} title="SUMMARY">
             <div className="space-y-3 mb-6">
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--sl-text-40)]">Name</span>
