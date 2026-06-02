@@ -1,9 +1,16 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
+import Fuse from 'fuse.js'
 import { createClient } from '@/lib/supabase/client'
 import SiteLogo from '@/app/components/SiteLogo'
+import CLUBS_RAW from '../../squash_clubs.json'
+
+// ── Club data ─────────────────────────────────────────────────────────────────
+
+interface Club { name: string; city: string; region: string; country: string }
+const CLUBS = CLUBS_RAW as Club[]
 
 // ── Region data ──────────────────────────────────────────────────────────────
 
@@ -96,7 +103,7 @@ export default function SignupModal({ onClose }: Props) {
   const [step, setStep] = useState<1 | 2>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [done, setDone] = useState(false) // email-confirm flow
+  const [done, setDone] = useState(false)
 
   const [s1, setS1] = useState<Step1>({
     firstName: '', lastName: '', email: '', password: '', confirmPassword: '',
@@ -111,6 +118,36 @@ export default function SignupModal({ onClose }: Props) {
   const [agreeToS, setAgreeToS] = useState(false)
   const [agreePrivacy, setAgreePrivacy] = useState(false)
   const [emailOptIn, setEmailOptIn] = useState(false)
+
+  // ── Club search state ─────────────────────────────────────────────────────
+  const [clubQuery, setClubQuery] = useState('')
+  const [clubOpen, setClubOpen] = useState(false)
+  const [clubFreeText, setClubFreeText] = useState(false)
+  const clubRef = useRef<HTMLDivElement>(null)
+
+  const fuse = useMemo(() => new Fuse(CLUBS, {
+    keys: ['name', 'city'],
+    threshold: 0.4,
+    minMatchCharLength: 1,
+  }), [])
+
+  const clubResults = useMemo<Club[]>(() => {
+    if (!clubQuery.trim()) return CLUBS.slice(0, 10)
+    return fuse.search(clubQuery).slice(0, 10).map(r => r.item)
+  }, [clubQuery, fuse])
+
+  // Close club dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (clubRef.current && !clubRef.current.contains(e.target as Node)) {
+        setClubOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   const provinces = REGIONS[s2.country] ?? []
 
@@ -128,7 +165,7 @@ export default function SignupModal({ onClose }: Props) {
     return () => { document.body.style.overflow = '' }
   }, [])
 
-  // ── Step 1 helpers ──────────────────────────────────────────────────────
+  // ── Step 1 helpers ────────────────────────────────────────────────────────
 
   const set1 = (k: keyof Step1) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setS1(prev => ({ ...prev, [k]: e.target.value }))
@@ -149,7 +186,7 @@ export default function SignupModal({ onClose }: Props) {
     setStep(2)
   }
 
-  // ── Step 2 helpers ──────────────────────────────────────────────────────
+  // ── Step 2 helpers ────────────────────────────────────────────────────────
 
   const set2inp = (k: keyof Step2) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setS2(prev => ({ ...prev, [k]: e.target.value }))
@@ -171,11 +208,34 @@ export default function SignupModal({ onClose }: Props) {
     setS2(prev => ({ ...prev, country: e.target.value, province: '' }))
   }
 
-  const handleNoHomeClub = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setS2(prev => ({ ...prev, noHomeClub: e.target.checked, homeClub: e.target.checked ? '' : prev.homeClub }))
+  // ── Club selection handlers ───────────────────────────────────────────────
+
+  const selectClub = (club: Club) => {
+    setS2(p => ({ ...p, homeClub: club.name, noHomeClub: false }))
+    setClubOpen(false)
+    setClubQuery('')
   }
 
-  // ── Submit ──────────────────────────────────────────────────────────────
+  const selectNoHomeClub = () => {
+    setS2(p => ({ ...p, homeClub: '', noHomeClub: true }))
+    setClubOpen(false)
+    setClubQuery('')
+  }
+
+  const selectFreeText = () => {
+    setS2(p => ({ ...p, homeClub: clubQuery, noHomeClub: false }))
+    setClubFreeText(true)
+    setClubOpen(false)
+  }
+
+  const clearClub = () => {
+    setS2(p => ({ ...p, homeClub: '', noHomeClub: false }))
+    setClubQuery('')
+    setClubFreeText(false)
+    setClubOpen(true)
+  }
+
+  // ── Submit ────────────────────────────────────────────────────────────────
 
   const handleSubmit = async () => {
     if (!agreeToS || !agreePrivacy) {
@@ -203,7 +263,6 @@ export default function SignupModal({ onClose }: Props) {
       const userId = data.user?.id
 
       if (userId && data.session) {
-        // Email confirmation disabled — session granted immediately
         const username = `${s1.firstName.trim()}.${s1.lastName.trim()}`
           .toLowerCase()
           .replace(/[^a-z0-9.]/g, '')
@@ -228,7 +287,6 @@ export default function SignupModal({ onClose }: Props) {
 
         router.push('/dashboard')
       } else if (userId) {
-        // Email confirmation required
         setDone(true)
       } else {
         setError('Something went wrong. Please try again.')
@@ -238,7 +296,18 @@ export default function SignupModal({ onClose }: Props) {
     }
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────
+  // ── Render ────────────────────────────────────────────────────────────────
+
+  // What to show in the club search input
+  const clubInputValue = clubOpen
+    ? clubQuery
+    : s2.noHomeClub ? '' : s2.homeClub
+
+  const clubInputPlaceholder = s2.noHomeClub
+    ? 'No Home Club'
+    : s2.homeClub
+      ? s2.homeClub
+      : 'Search by club name or city…'
 
   return (
     <div
@@ -249,11 +318,9 @@ export default function SignupModal({ onClose }: Props) {
 
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-[var(--sl-border)] shrink-0">
-          {/* Logo — centered, nav size (~half the navbar navLarge) */}
           <div className="flex justify-center mb-4">
             <SiteLogo size="nav" />
           </div>
-          {/* Title row */}
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-base font-bold tracking-widest text-[var(--sl-text)]">CREATE ACCOUNT</h2>
@@ -393,26 +460,108 @@ export default function SignupModal({ onClose }: Props) {
                 </div>
               </div>
 
-              {/* Home Club */}
-              <div>
+              {/* ── Home Club — searchable dropdown ── */}
+              <div ref={clubRef}>
                 <label className={lbl}>HOME CLUB</label>
-                <input
-                  type="text"
-                  value={s2.homeClub}
-                  onChange={set2inp('homeClub')}
-                  placeholder="e.g. Toronto Squash Club"
-                  disabled={s2.noHomeClub}
-                  className={`${inp} disabled:opacity-40 disabled:cursor-not-allowed`}
-                />
-                <label className="flex items-center gap-2 mt-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={s2.noHomeClub}
-                    onChange={handleNoHomeClub}
-                    className="rounded accent-[var(--sl-accent)]"
-                  />
-                  <span className="text-[11px] text-[var(--sl-text-30)]">I don&apos;t have a home club</span>
-                </label>
+
+                {clubFreeText ? (
+                  /* Free text fallback */
+                  <div>
+                    <input
+                      type="text"
+                      value={s2.homeClub}
+                      onChange={set2inp('homeClub')}
+                      placeholder="Enter your club name"
+                      autoComplete="off"
+                      className={inp}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setClubFreeText(false); setClubQuery(s2.homeClub); setClubOpen(true) }}
+                      className="text-[10px] text-[var(--sl-accent-60)] hover:text-[var(--sl-accent)] transition mt-1.5 block"
+                    >
+                      ← Search the list instead
+                    </button>
+                  </div>
+                ) : (
+                  /* Search mode */
+                  <div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={clubInputValue}
+                        onChange={e => {
+                          setClubQuery(e.target.value)
+                          setClubOpen(true)
+                          setS2(p => ({ ...p, homeClub: '', noHomeClub: false }))
+                        }}
+                        onFocus={() => {
+                          setClubQuery(s2.noHomeClub ? '' : s2.homeClub)
+                          setClubOpen(true)
+                        }}
+                        placeholder={clubInputPlaceholder}
+                        autoComplete="off"
+                        className={`${inp} pr-8 ${s2.noHomeClub ? 'text-[var(--sl-text-30)]' : ''}`}
+                      />
+                      {(s2.homeClub || s2.noHomeClub) && !clubOpen && (
+                        <button
+                          type="button"
+                          onClick={clearClub}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--sl-text-30)] hover:text-[var(--sl-text)] transition text-base leading-none"
+                          aria-label="Clear selection"
+                        >
+                          ×
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Dropdown — inline so modal scroll handles it */}
+                    {clubOpen && (
+                      <div className="mt-1 rounded-lg border border-[var(--sl-border)] bg-[var(--sl-surface-deep)] overflow-hidden">
+                        {/* No Home Club — top */}
+                        <button
+                          type="button"
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={selectNoHomeClub}
+                          className="w-full text-left px-4 py-2.5 text-sm text-[var(--sl-text-40)] hover:bg-[var(--sl-surface-hover)] transition border-b border-[var(--sl-border)] flex items-center gap-2"
+                        >
+                          <span className="text-[var(--sl-text-20)] font-bold">—</span>
+                          No Home Club
+                        </button>
+
+                        {/* Results */}
+                        <div className="max-h-44 overflow-y-auto">
+                          {clubResults.length > 0 ? (
+                            clubResults.map((club, i) => (
+                              <button
+                                key={i}
+                                type="button"
+                                onMouseDown={e => e.preventDefault()}
+                                onClick={() => selectClub(club)}
+                                className="w-full text-left px-4 py-2.5 hover:bg-[var(--sl-surface-hover)] transition"
+                              >
+                                <span className="text-sm text-[var(--sl-text)]">{club.name}</span>
+                                <span className="text-xs text-[var(--sl-text-30)] ml-1.5">— {club.city}, {club.region}</span>
+                              </button>
+                            ))
+                          ) : (
+                            <p className="px-4 py-3 text-sm text-[var(--sl-text-30)]">No clubs found</p>
+                          )}
+                        </div>
+
+                        {/* My club isn't listed — bottom */}
+                        <button
+                          type="button"
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={selectFreeText}
+                          className="w-full text-left px-4 py-2.5 text-sm text-[var(--sl-accent-60)] hover:bg-[var(--sl-surface-hover)] hover:text-[var(--sl-accent)] transition border-t border-[var(--sl-border)]"
+                        >
+                          + My club isn&apos;t listed — add it
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* USR Rating + Division */}
