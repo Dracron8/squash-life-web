@@ -23,7 +23,7 @@ type Registration = {
   id: string
   division: string | null
   payment_status: string
-  tournaments: { id: string; name: string; start_date: string | null } | null
+  tournaments: { id: string; name: string; tournament_details: { start_date: string | null }[] } | null
 }
 
 const PAYMENT_MSG: Record<string, { label: string; sub: string; color: string }> = {
@@ -74,7 +74,7 @@ export default function DashboardPage() {
 
         supabase
           .from('registrations')
-          .select('id, division, payment_status, tournaments(id, name, start_date)')
+          .select('id, division, payment_status, tournaments(id, name, tournament_details(start_date))')
           .eq('user_id', userId)
           .order('registered_at', { ascending: false })
           .limit(10),
@@ -303,9 +303,9 @@ export default function DashboardPage() {
                           )}
                         </div>
                       </div>
-                      {r.tournaments?.start_date && (
+                      {r.tournaments?.tournament_details?.[0]?.start_date && (
                         <p className="text-xs mt-2" style={{ color: '#666' }}>
-                          {new Date(r.tournaments.start_date).toLocaleDateString('en-AU', {
+                          {new Date(r.tournaments.tournament_details[0].start_date).toLocaleDateString('en-AU', {
                             day: 'numeric', month: 'long', year: 'numeric',
                           })}
                         </p>
