@@ -154,6 +154,7 @@ export default function NewTournamentPage() {
       if (!user) { router.push('/login'); return }
 
       // 1. Create tournament
+      const court_entry_code = Math.random().toString(36).slice(2, 8).toUpperCase()
       const { data: tournament, error: tErr } = await supabase
         .from('tournaments')
         .insert({
@@ -161,6 +162,7 @@ export default function NewTournamentPage() {
           td_id: user.id,
           status: 'setup_pending',
           draw_type: form.draw_type,
+          court_entry_code,
         })
         .select('id')
         .single()
