@@ -19,24 +19,35 @@ type Tournament = {
 export default async function Home() {
   const supabase = await createClient()
 
-  const { data: tournaments, error } = await supabase
-    .from('tournaments')
-    .select(`
-      id,
-      name,
-      status,
-      tournament_details (
-        start_date,
-        singles_fee,
-        clubs (
-          name
+  const [{ data: tournaments }, { data: { user } }] = await Promise.all([
+    supabase
+      .from('tournaments')
+      .select(`
+        id,
+        name,
+        status,
+        tournament_details (
+          start_date,
+          singles_fee,
+          clubs (
+            name
+          )
         )
-      )
-    `)
-    .eq('status', 'registration_open')
-    .order('created_at', { ascending: true })
+      `)
+      .eq('status', 'registration_open')
+      .order('created_at', { ascending: true }),
+    supabase.auth.getUser(),
+  ])
 
-  console.log('tournaments:', tournaments, 'error:', error)
+  let isTD = false
+  if (user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('user_role')
+      .eq('id', user.id)
+      .maybeSingle()
+    isTD = profile?.user_role === 'td' || profile?.user_role === 'both'
+  }
 
   return (
     <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
@@ -44,32 +55,50 @@ export default async function Home() {
         className="border-b border-[var(--sl-border)] px-6 py-5 grid grid-cols-3 items-center"
         style={{ backgroundColor: 'var(--sl-bg)' }}
       >
-        {/* Left — SIGN IN */}
+        {/* Left — SIGN IN or TD DASHBOARD */}
         <div className="flex items-center justify-start">
-          <Link
-            href="/login"
-            className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
-          >
-            SIGN IN
-          </Link>
+          {isTD ? (
+            <Link
+              href="/td"
+              className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
+            >
+              TD DASHBOARD
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
+            >
+              SIGN IN
+            </Link>
+          )}
         </div>
 
-        {/* Center — Logo (2× nav size) */}
+        {/* Center — Logo */}
         <div className="flex justify-center">
           <Link href="/">
             <SiteLogo size="navLarge" />
           </Link>
         </div>
 
-        {/* Right — ThemeToggle + SIGN IN */}
+        {/* Right — ThemeToggle + SIGN IN / MY PROFILE */}
         <div className="flex items-center justify-end gap-3">
           <ThemeToggle />
-          <Link
-            href="/login"
-            className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
-          >
-            SIGN IN
-          </Link>
+          {user ? (
+            <Link
+              href="/dashboard"
+              className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
+            >
+              MY PROFILE
+            </Link>
+          ) : (
+            <Link
+              href="/login"
+              className="text-sm font-semibold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-5 py-2.5 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
+            >
+              SIGN IN
+            </Link>
+          )}
         </div>
       </header>
 
