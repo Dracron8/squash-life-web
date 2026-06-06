@@ -41,7 +41,7 @@ type Registration = {
   division: string | null
   draw_segment: string
   payment_status: string
-  created_at: string
+  registered_at: string
   club_name?: string
 }
 
@@ -80,9 +80,23 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 const PAY_COLORS: Record<string, string> = {
-  paid:     'text-green-400',
-  pending:  'text-yellow-400',
-  refunded: 'text-[var(--sl-text-30)]',
+  fully_paid:   'text-green-400',
+  deposit_paid: 'text-yellow-400',
+  waitlist:     'text-[var(--sl-text-40)]',
+  pending:      'text-[var(--sl-text-40)]',
+}
+
+const PAY_CYCLE: Record<string, string> = {
+  waitlist:     'deposit_paid',
+  deposit_paid: 'fully_paid',
+  fully_paid:   'waitlist',
+  pending:      'deposit_paid',
+}
+
+function dotColor(status: string): string {
+  if (status === 'fully_paid')   return '#22c55e'
+  if (status === 'deposit_paid') return '#eab308'
+  return '#ef4444'
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
@@ -122,7 +136,7 @@ export default function TournamentDetailPage() {
 
     const { data: regs } = await supabase
       .from('registrations')
-      .select('id, user_id, first_name, last_name, usr_rating, division, draw_segment, payment_status, created_at')
+      .select('id, user_id, first_name, last_name, usr_rating, division, draw_segment, payment_status, registered_at')
       .eq('tournament_id', id)
       .order('division', { ascending: true })
       .order('usr_rating', { ascending: false })
@@ -220,6 +234,18 @@ export default function TournamentDetailPage() {
     const supabase = createClient()
     await supabase.from('tournaments').delete().eq('id', id)
     router.push('/td')
+  }
+
+  async function cyclePaymentStatus(regId: string, currentStatus: string) {
+    const nextStatus = PAY_CYCLE[currentStatus] ?? 'deposit_paid'
+    const supabase = createClient()
+    const { error: err } = await supabase
+      .from('registrations')
+      .update({ payment_status: nextStatus })
+      .eq('id', regId)
+    if (!err) {
+      setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, payment_status: nextStatus } : r))
+    }
   }
 
   if (loading) {
@@ -353,12 +379,19 @@ export default function TournamentDetailPage() {
                         <td className="px-4 py-3 text-[var(--sl-text-60)]">{r.usr_rating ?? '—'}</td>
                         <td className="px-4 py-3 text-[var(--sl-text-60)] text-xs">{r.club_name || '—'}</td>
                         <td className="px-4 py-3">
-                          <span className={`text-[10px] font-bold tracking-widest ${PAY_COLORS[r.payment_status] ?? 'text-[var(--sl-text-40)]'}`}>
-                            {r.payment_status.toUpperCase()}
-                          </span>
+                          <button
+                            onClick={() => cyclePaymentStatus(r.id, r.payment_status)}
+                            title={`${r.payment_status} — click to change`}
+                            className="flex items-center gap-1.5 hover:opacity-80 transition"
+                          >
+                            <span className="w-2.5 h-2.5 rounded-full shrink-0 inline-block" style={{ backgroundColor: dotColor(r.payment_status) }} />
+                            <span className={`text-[10px] font-bold tracking-widest ${PAY_COLORS[r.payment_status] ?? 'text-[var(--sl-text-40)]'}`}>
+                              {r.payment_status.replace(/_/g, ' ').toUpperCase()}
+                            </span>
+                          </button>
                         </td>
                         <td className="px-4 py-3 text-[var(--sl-text-30)] text-xs">
-                          {r.created_at ? new Date(r.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}
+                          {r.registered_at ? new Date(r.registered_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}
                         </td>
                       </tr>
                     ))}

@@ -138,7 +138,7 @@ export default function RegisterPage() {
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
-  async function handleSubmit() {
+  async function handleSubmit(paymentStatus: 'deposit_paid' | 'fully_paid') {
     if (!player || !userId || !tournament) return
     setError(null)
     setState('submitting')
@@ -163,7 +163,7 @@ export default function RegisterPage() {
         usr_rating:     rating,
         division:       ratingToDivision(rating),
         draw_segment:   'main',
-        payment_status: 'pending',
+        payment_status: paymentStatus,
       })
 
     if (insertErr) { setError(insertErr.message); setState('confirm'); return }
@@ -349,14 +349,27 @@ export default function RegisterPage() {
 
               {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
 
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={state === 'submitting'}
-                className="w-full py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50"
-              >
-                {state === 'submitting' ? 'REGISTERING...' : 'CONFIRM & CONTINUE'}
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSubmit('deposit_paid')}
+                  disabled={state === 'submitting'}
+                  className="py-3.5 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-10)] transition disabled:opacity-50"
+                >
+                  {state === 'submitting' ? '...' : 'PAY DEPOSIT'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSubmit('fully_paid')}
+                  disabled={state === 'submitting'}
+                  className="py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50"
+                >
+                  {state === 'submitting' ? '...' : 'PAY IN FULL'}
+                </button>
+              </div>
+              <p className="text-[var(--sl-text-20)] text-[10px] text-center tracking-wide mt-1">
+                Payment processing coming soon
+              </p>
             </div>
 
           </div>

@@ -26,8 +26,14 @@ type Match = {
 type Registration = {
   id: string
   division: string | null
-  status: string
+  payment_status: string
   tournaments: { id: string; name: string; start_date: string | null } | null
+}
+
+const PAYMENT_MSG: Record<string, { label: string; sub: string; color: string }> = {
+  fully_paid:   { label: 'Registered ✓', sub: 'Fully paid',                             color: 'text-green-400' },
+  deposit_paid: { label: 'Deposit Received', sub: 'Spot guaranteed, balance due at door', color: 'text-yellow-400' },
+  waitlist:     { label: 'Deposit Required', sub: 'You are on the waitlist',              color: 'text-[var(--sl-text-40)]' },
 }
 
 type Player = {
@@ -67,9 +73,9 @@ export default function DashboardPage() {
 
         supabase
           .from('registrations')
-          .select('id, division, status, tournaments(id, name, start_date)')
+          .select('id, division, payment_status, tournaments(id, name, start_date)')
           .eq('user_id', userId)
-          .order('created_at', { ascending: false })
+          .order('registered_at', { ascending: false })
           .limit(10),
       ])
 
@@ -232,7 +238,7 @@ export default function DashboardPage() {
                   href={`/tournament/${r.tournaments?.id}`}
                   className="block bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5 hover:border-[var(--sl-accent-30)] transition"
                 >
-                  <div className="flex items-start justify-between">
+                  <div className="flex items-start justify-between gap-3">
                     <div>
                       <p className="font-semibold text-sm tracking-wide text-[var(--sl-text)]">{r.tournaments?.name}</p>
                       {r.division && (
@@ -241,15 +247,15 @@ export default function DashboardPage() {
                         </span>
                       )}
                     </div>
-                    <span
-                      className={`text-[10px] font-bold tracking-widest px-2 py-1 rounded ${
-                        r.status === 'confirmed'
-                          ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                          : 'bg-[var(--sl-border-faint)] text-[var(--sl-text-30)] border border-[var(--sl-border)]'
-                      }`}
-                    >
-                      {r.status.toUpperCase()}
-                    </span>
+                    {(() => {
+                      const pm = PAYMENT_MSG[r.payment_status] ?? { label: r.payment_status.toUpperCase(), sub: '', color: 'text-[var(--sl-text-40)]' }
+                      return (
+                        <div className="text-right shrink-0">
+                          <p className={`text-[10px] font-bold tracking-widest ${pm.color}`}>{pm.label}</p>
+                          {pm.sub && <p className="text-[9px] text-[var(--sl-text-30)] mt-0.5 leading-snug max-w-[140px] text-right">{pm.sub}</p>}
+                        </div>
+                      )
+                    })()}
                   </div>
                   {r.tournaments?.start_date && (
                     <p className="text-[var(--sl-text-30)] text-xs mt-2">

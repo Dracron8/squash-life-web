@@ -117,7 +117,8 @@ export default async function TournamentPage({ params }: Props) {
     supabase
       .from('registrations')
       .select('*', { count: 'exact', head: true })
-      .eq('tournament_id', id),
+      .eq('tournament_id', id)
+      .in('payment_status', ['deposit_paid', 'fully_paid']),
   ])
 
   if (!t) notFound()
@@ -206,16 +207,24 @@ export default async function TournamentPage({ params }: Props) {
           {/* ══ LEFT COLUMN (col-span-2) ══ */}
           <div className="md:col-span-2 space-y-5">
 
-            {/* Top register button */}
+            {/* Top register buttons */}
             {!isRegistered && (
               isOpen ? (
                 user ? (
-                  <Link
-                    href={`/tournament/${id}/register`}
-                    className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-                  >
-                    REGISTER NOW
-                  </Link>
+                  <div className="flex gap-3">
+                    <Link
+                      href={`/tournament/${id}/register`}
+                      className="flex-1 text-center py-4 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-10)] transition"
+                    >
+                      PAY DEPOSIT
+                    </Link>
+                    <Link
+                      href={`/tournament/${id}/register`}
+                      className="flex-1 text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+                    >
+                      PAY IN FULL
+                    </Link>
+                  </div>
                 ) : (
                   <Link
                     href={`/login?next=/tournament/${id}`}
@@ -305,20 +314,29 @@ export default async function TournamentPage({ params }: Props) {
               {/* Players registered */}
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">PLAYERS REGISTERED</p>
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">CONFIRMED PLAYERS</p>
                   <p className="text-sm font-semibold text-[var(--sl-text)]">
                     {registered}
                     {capacity != null && <span className="text-[var(--sl-text-30)]"> / {capacity}</span>}
                   </p>
                 </div>
-                <div className="w-full bg-[var(--sl-progress-track)] rounded-full h-1.5">
+                <div className="relative w-full bg-[var(--sl-progress-track)] rounded-full h-2.5 mb-3">
                   <div
-                    className="bg-[var(--sl-accent)] h-1.5 rounded-full transition-all"
+                    className="relative bg-[var(--sl-accent)] h-2.5 rounded-full transition-all overflow-visible"
                     style={{ width: capacityPct != null ? `${capacityPct}%` : '0%' }}
-                  />
+                  >
+                    {registered > 0 && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src="/sqsh-icon.png"
+                        alt=""
+                        className="absolute right-0 top-1/2 -translate-y-1/2 translate-x-1/2 w-6 h-6 object-contain pointer-events-none"
+                      />
+                    )}
+                  </div>
                 </div>
                 {capacityPct != null && capacityPct >= 80 && (
-                  <p className="text-orange-400 text-xs mt-2 font-semibold">Filling up fast</p>
+                  <p className="text-orange-400 text-xs font-semibold">Filling up fast</p>
                 )}
               </div>
 
@@ -356,7 +374,7 @@ export default async function TournamentPage({ params }: Props) {
                 )}
               </div>
 
-              {/* CTA button */}
+              {/* CTA buttons */}
               {isRegistered ? (
                 <div className="w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] text-[var(--sl-accent)] font-semibold tracking-widest text-sm">
                   ✓ REGISTERED
@@ -364,12 +382,23 @@ export default async function TournamentPage({ params }: Props) {
               ) : isOpen ? (
                 <>
                   {user ? (
-                    <Link
-                      href={`/tournament/${id}/register`}
-                      className="block w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-                    >
-                      REGISTER NOW
-                    </Link>
+                    <>
+                      <div className="flex gap-2">
+                        <Link
+                          href={`/tournament/${id}/register`}
+                          className="flex-1 text-center py-3 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-10)] transition"
+                        >
+                          PAY DEPOSIT
+                        </Link>
+                        <Link
+                          href={`/tournament/${id}/register`}
+                          className="flex-1 text-center py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-hover)] transition"
+                        >
+                          PAY IN FULL
+                        </Link>
+                      </div>
+                      <p className="text-[var(--sl-text-20)] text-[10px] text-center">Payment processing coming soon</p>
+                    </>
                   ) : (
                     <>
                       <Link
@@ -408,12 +437,20 @@ export default async function TournamentPage({ params }: Props) {
       {!isRegistered && isOpen && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 border-t border-[var(--sl-border)] backdrop-blur-sm" style={{ backgroundColor: 'var(--sl-mobile-bar)' }}>
           {user ? (
-            <Link
-              href={`/tournament/${id}/register`}
-              className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-            >
-              REGISTER NOW
-            </Link>
+            <div className="flex gap-3">
+              <Link
+                href={`/tournament/${id}/register`}
+                className="flex-1 text-center py-4 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-10)] transition"
+              >
+                PAY DEPOSIT
+              </Link>
+              <Link
+                href={`/tournament/${id}/register`}
+                className="flex-1 text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+              >
+                PAY IN FULL
+              </Link>
+            </div>
           ) : (
             <Link
               href={`/login?next=/tournament/${id}`}
