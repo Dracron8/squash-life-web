@@ -49,6 +49,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true)
   const [player, setPlayer] = useState<Player | null>(null)
   const [authName, setAuthName] = useState<string | null>(null)
+  const [isTD, setIsTD] = useState(false)
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
   const [registrations, setRegistrations] = useState<Registration[]>([])
 
@@ -56,6 +57,13 @@ export default function DashboardPage() {
     const supabase = createClient()
 
     async function fetchData(userId: string) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('user_role')
+        .eq('id', userId)
+        .maybeSingle()
+      setIsTD(profile?.user_role === 'td' || profile?.user_role === 'both')
+
       const [{ data: p }, { data: m }, { data: r }] = await Promise.all([
         supabase
           .from('players')
@@ -154,13 +162,22 @@ export default function DashboardPage() {
               Player Dashboard
             </p>
           </Link>
-          <button
-            onClick={handleSignOut}
-            className="text-[10px] font-bold tracking-[0.14em] transition hover:opacity-60"
-            style={{ color: '#C0392B' }}
-          >
-            SIGN OUT
-          </button>
+          <div className="flex items-center gap-3">
+            {isTD && (
+              <Link href="/td"
+                className="text-[10px] font-bold tracking-[0.14em] uppercase px-4 py-2 rounded-lg transition hover:opacity-80"
+                style={{ color: '#C0392B', border: '1.5px solid rgba(192,57,43,0.4)' }}>
+                TD DASHBOARD
+              </Link>
+            )}
+            <button
+              onClick={handleSignOut}
+              className="text-[10px] font-bold tracking-[0.14em] transition hover:opacity-60"
+              style={{ color: '#C0392B' }}
+            >
+              SIGN OUT
+            </button>
+          </div>
         </div>
 
         {/* ── CONTENT ── */}
