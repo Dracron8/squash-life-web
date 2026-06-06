@@ -113,13 +113,12 @@ export default async function Home() {
             {(tournaments as unknown as Tournament[]).map((t) => {
               const detail = t.tournament_details?.[0]
               return (
-                <Link
+                <div
                   key={t.id}
-                  href={`/tournament/${t.id}`}
-                  className="block bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6 hover:border-[var(--sl-accent-40)] hover:bg-[var(--sl-surface-hover)] transition group"
+                  className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6 hover:border-[var(--sl-accent-40)] transition"
                 >
                   <div className="flex items-start justify-between gap-4">
-                    <div>
+                    <Link href={`/tournament/${t.id}`} className="group flex-1 min-w-0">
                       <h3 className="text-lg font-semibold tracking-wide text-[var(--sl-text)] group-hover:text-[var(--sl-accent)] transition">
                         {t.name}
                       </h3>
@@ -129,7 +128,7 @@ export default async function Home() {
                       {detail?.singles_fee != null && (
                         <p className="text-[var(--sl-text-30)] text-xs mt-1">Entry: ${detail.singles_fee}</p>
                       )}
-                    </div>
+                    </Link>
                     <div className="text-right shrink-0">
                       {detail?.start_date && (
                         <p className="text-[var(--sl-text-60)] text-sm">
@@ -151,7 +150,18 @@ export default async function Home() {
                       </span>
                     </div>
                   </div>
-                </Link>
+
+                  {t.status === 'registration_open' && (
+                    <div className="mt-4 pt-4 border-t border-[var(--sl-border)]">
+                      <Link
+                        href={`/tournament/${t.id}/register`}
+                        className="block w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+                      >
+                        REGISTER →
+                      </Link>
+                    </div>
+                  )}
+                </div>
               )
             })}
           </div>
