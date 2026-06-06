@@ -7,25 +7,26 @@ import { createClient } from '@/lib/supabase/client'
 import ThemeToggle from '@/app/components/ThemeToggle'
 import SiteLogo from '@/app/components/SiteLogo'
 
-// ── Division helpers ────────────────────────────────────────────────────────
+// ── Division helper ──────────────────────────────────────────────────────────
 
-function ratingToDivision(rating: number): string {
-  if (rating >= 5.5) return 'OPEN'
-  if (rating >= 4.5) return 'A'
-  if (rating >= 3.5) return 'B'
-  if (rating >= 2.5) return 'C'
+function ratingToDivision(r: number): string {
+  if (r >= 5.5) return 'OPEN'
+  if (r >= 4.5) return 'A'
+  if (r >= 3.5) return 'B'
+  if (r >= 2.5) return 'C'
   return 'D'
 }
 
-const DIVISION_CARDS = [
-  { label: 'OPEN', subtitle: 'Tournament player, provincial/national level', range: '5.5+' },
-  { label: 'A',    subtitle: 'Strong competitive club player',               range: '4.5 – 5.49' },
-  { label: 'B',    subtitle: 'Intermediate competitive player',              range: '3.5 – 4.49' },
-  { label: 'C',    subtitle: 'Recreational competitive player',              range: '2.5 – 3.49' },
-  { label: 'D',    subtitle: 'Beginner / new to tournaments',                range: '< 2.5' },
-]
+// ── Types ────────────────────────────────────────────────────────────────────
 
-// ── Types ───────────────────────────────────────────────────────────────────
+type PlayerProfile = {
+  first_name: string
+  last_name: string
+  email: string
+  phone: string
+  club_name: string
+  usr_rating: number | null
+}
 
 type TournamentInfo = {
   id: string
@@ -34,180 +35,150 @@ type TournamentInfo = {
   doubles_fee: number | null
   has_singles: boolean
   has_doubles: boolean
-  has_clothing: boolean
 }
 
 type EventType = 'singles' | 'doubles' | 'both'
 
-// ── Shared input / label classes ────────────────────────────────────────────
+type PageState = 'loading' | 'incomplete' | 'confirm' | 'submitting' | 'success'
 
-const inputCls =
-  'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-const labelCls = 'block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1'
-
-// ── Section wrapper ─────────────────────────────────────────────────────────
-
-function Section({ n, title, children }: { n: number; title: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6">
-      <div className="flex items-center gap-3 mb-5">
-        <span className="w-6 h-6 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] text-[var(--sl-accent)] text-xs font-bold flex items-center justify-center shrink-0">
-          {n}
-        </span>
-        <h2 className="text-sm font-bold tracking-widest text-[var(--sl-text-80)]">{title}</h2>
-      </div>
-      {children}
-    </div>
-  )
+function isProfileComplete(p: PlayerProfile): boolean {
+  return !!(p.first_name.trim() && p.last_name.trim() && p.usr_rating != null)
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// ── Main component ───────────────────────────────────────────────────────────
 
 export default function RegisterPage() {
   const params = useParams()
   const id = params.id as string
   const router = useRouter()
 
-  // Tournament data
+  const [state, setState] = useState<PageState>('loading')
   const [tournament, setTournament] = useState<TournamentInfo | null>(null)
-  const [loadingTournament, setLoadingTournament] = useState(true)
+  const [player, setPlayer] = useState<PlayerProfile | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
-  // Section 1 — Personal info
-  const [firstName, setFirstName] = useState('')
-  const [lastName, setLastName] = useState('')
-  const [email, setEmail] = useState('')
-  const [phone, setPhone] = useState('')
-
-  // Section 2 — Rating / division
-  const [hasNoRating, setHasNoRating] = useState(false)
-  const [rating, setRating] = useState('')
-  const [selectedDivision, setSelectedDivision] = useState<string | null>(null)
-
-  // Section 3 — Event type
+  // Confirmation step state
+  const [divisionConfirmed, setDivisionConfirmed] = useState<boolean | null>(null)
   const [eventType, setEventType] = useState<EventType>('singles')
-
-  // Section 4 — Clothing sizes (shown when tournament has_clothing)
-  const [tshirtSize, setTshirtSize] = useState('')
-  const [sweaterSize, setSweaterSize] = useState('')
-  const [trackpantSize, setTrackpantSize] = useState('')
-
-  // Submission
   const [error, setError] = useState<string | null>(null)
 
-  // ── Fetch tournament details ──────────────────────────────────────────────
+  // ── Load data ────────────────────────────────────────────────────────────
 
   useEffect(() => {
     const supabase = createClient()
-    supabase
-      .from('tournaments')
-      .select('id, name, tournament_details(singles_fee, doubles_fee, has_singles_draw, has_doubles_draw, has_clothing)')
-      .eq('id', id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const d = (data as any).tournament_details?.[0]
-          const hasSingles = d?.has_singles_draw ?? true
-          const hasDoubles = d?.has_doubles_draw ?? false
-          setTournament({
-            id: data.id,
-            name: data.name,
-            singles_fee: d?.singles_fee ?? null,
-            doubles_fee: d?.doubles_fee ?? null,
-            has_singles: hasSingles,
-            has_doubles: hasDoubles,
-            has_clothing: d?.has_clothing ?? false,
-          })
-          setEventType(hasSingles ? 'singles' : 'doubles')
-        }
-        setLoadingTournament(false)
-      })
-  }, [id])
 
-  // Pre-fill from profile if logged in
-  useEffect(() => {
-    const supabase = createClient()
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) return
-      if (user.email) setEmail(user.email)
+    async function load() {
+      // 1. Auth check
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        router.replace(`/login?next=/tournament/${id}/register`)
+        return
+      }
+      setUserId(user.id)
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, phone, usr_rating, division')
-        .eq('id', user.id)
+      // 2. Tournament info
+      const { data: tData } = await supabase
+        .from('tournaments')
+        .select('id, name, tournament_details(singles_fee, doubles_fee, has_singles_draw, has_doubles_draw)')
+        .eq('id', id)
         .single()
 
-      if (profile) {
-        if (profile.first_name) setFirstName(profile.first_name)
-        if (profile.last_name) setLastName(profile.last_name)
-        if (profile.phone) setPhone(profile.phone)
-        if (profile.usr_rating != null) setRating(String(profile.usr_rating))
-        if (profile.division) setSelectedDivision(profile.division)
-      } else {
-        // Google OAuth users — fall back to auth metadata
-        const meta = user.user_metadata ?? {}
-        if (meta.given_name) setFirstName(meta.given_name)
-        else if (meta.full_name) setFirstName(meta.full_name.split(' ')[0] ?? '')
-        if (meta.family_name) setLastName(meta.family_name)
-        else if (meta.full_name) setLastName(meta.full_name.split(' ').slice(1).join(' '))
+      if (tData) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const d = (tData as any).tournament_details?.[0]
+        const hasSingles = d?.has_singles_draw ?? true
+        const hasDoubles = d?.has_doubles_draw ?? false
+        setTournament({
+          id: tData.id,
+          name: tData.name,
+          singles_fee: d?.singles_fee ?? null,
+          doubles_fee: d?.doubles_fee ?? null,
+          has_singles: hasSingles,
+          has_doubles: hasDoubles,
+        })
+        setEventType(hasSingles ? 'singles' : 'doubles')
       }
-    })
-  }, [])
 
-  // ── Derived values ────────────────────────────────────────────────────────
+      // 3. Player profile (from players table, NOT profiles)
+      const { data: p } = await supabase
+        .from('players')
+        .select('first_name, last_name, email, phone, club_name, usr_rating')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-  const assignedDivision: string | null = hasNoRating
-    ? selectedDivision
-    : rating ? ratingToDivision(parseFloat(rating)) : null
+      const profile: PlayerProfile = {
+        first_name: p?.first_name ?? '',
+        last_name:  p?.last_name ?? '',
+        email:      p?.email ?? user.email ?? '',
+        phone:      p?.phone ?? '',
+        club_name:  p?.club_name ?? '',
+        usr_rating: p?.usr_rating ?? null,
+      }
+      setPlayer(profile)
 
-  const entryFee: number | null = (() => {
-    if (!tournament) return null
-    if (eventType === 'singles') return tournament.singles_fee
-    if (eventType === 'doubles') return tournament.doubles_fee
-    return (tournament.singles_fee ?? 0) + (tournament.doubles_fee ?? 0)
-  })()
+      if (!isProfileComplete(profile)) {
+        setState('incomplete')
+      } else {
+        setState('confirm')
+      }
+    }
 
-  const canSubmit =
-    firstName.trim().length > 0 &&
-    lastName.trim().length > 0 &&
-    email.trim().length > 0 &&
-    assignedDivision !== null &&
-    (!tournament?.has_clothing || (tshirtSize !== '' && sweaterSize !== '' && trackpantSize !== ''))
+    load()
+  }, [id, router])
 
   // ── Submit ────────────────────────────────────────────────────────────────
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  async function handleSubmit() {
+    if (!player || !userId || !tournament || !divisionConfirmed) return
     setError(null)
-    if (!canSubmit) {
-      setError('Please complete all required fields.')
+    setState('submitting')
+
+    const division = ratingToDivision(player.usr_rating!)
+
+    const supabase = createClient()
+    const { error: insertErr } = await supabase
+      .from('registrations')
+      .insert({
+        tournament_id:  tournament.id,
+        user_id:        userId,
+        first_name:     player.first_name,
+        last_name:      player.last_name,
+        usr_rating:     player.usr_rating,
+        division,
+        draw_segment:   'main',
+        payment_status: 'pending',
+      })
+
+    if (insertErr) {
+      setError(insertErr.message)
+      setState('confirm')
       return
     }
-    // TODO: Stripe payment integration
-    // After payment confirmed, redirect to apparel store
-    window.location.href = 'https://www.sqsh.life/collections/all'
+
+    setState('success')
+    setTimeout(() => router.push('/dashboard'), 2000)
   }
 
-  // ── Loading state ─────────────────────────────────────────────────────────
+  // ── Derived ───────────────────────────────────────────────────────────────
 
-  if (loadingTournament) {
-    return (
-      <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
-      </main>
-    )
-  }
+  const division = player?.usr_rating != null ? ratingToDivision(player.usr_rating) : null
+
+  const entryFee = tournament
+    ? eventType === 'singles' ? tournament.singles_fee
+    : eventType === 'doubles' ? tournament.doubles_fee
+    : (tournament.singles_fee ?? 0) + (tournament.doubles_fee ?? 0)
+    : null
+
+  const canProceed = divisionConfirmed === true
 
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
-      {/* Header */}
       <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/">
-          <SiteLogo />
-        </Link>
+        <Link href="/"><SiteLogo /></Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />
           <Link
@@ -220,269 +191,171 @@ export default function RegisterPage() {
       </header>
 
       <div className="px-6 py-10 max-w-xl mx-auto">
-        {/* Page title */}
         <div className="mb-8">
           <p className="text-[var(--sl-text-30)] text-xs tracking-widest uppercase mb-1">Registration</p>
-          <h1 className="text-2xl font-bold tracking-wider text-[var(--sl-text)]">{tournament?.name ?? 'Tournament'}</h1>
+          <h1 className="text-2xl font-bold tracking-wider">{tournament?.name ?? '...'}</h1>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        {/* ── Loading ── */}
+        {state === 'loading' && (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
 
-          {/* ── Section 1: Personal Info ── */}
-          <Section n={1} title="PERSONAL INFO">
-            <div className="grid grid-cols-2 gap-3 mb-3">
-              <div>
-                <label className={labelCls}>FIRST NAME <span className="text-red-400">*</span></label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  placeholder="Jane"
-                  required
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>LAST NAME <span className="text-red-400">*</span></label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  placeholder="Smith"
-                  required
-                  className={inputCls}
-                />
-              </div>
+        {/* ── Incomplete profile ── */}
+        {state === 'incomplete' && (
+          <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] flex items-center justify-center mx-auto mb-4">
+              <span className="text-[var(--sl-accent)] text-xl font-bold">!</span>
             </div>
-            <div className="mb-3">
-              <label className={labelCls}>EMAIL <span className="text-red-400">*</span></label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="jane@example.com"
-                required
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>PHONE NUMBER <span className="text-[var(--sl-text-20)]">(optional)</span></label>
-              <input
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="+1 (416) 555-0100"
-                className={inputCls}
-              />
-            </div>
-          </Section>
+            <h2 className="text-base font-bold tracking-widest mb-2">COMPLETE YOUR PROFILE FIRST</h2>
+            <p className="text-[var(--sl-text-40)] text-sm mb-6 leading-relaxed">
+              Please complete your profile before registering.<br />
+              We need your name and Club Locker rating to place you in the right division.
+            </p>
+            <Link
+              href={`/profile?next=/tournament/${id}/register`}
+              className="inline-block text-sm font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] px-6 py-3 rounded-xl hover:bg-[var(--sl-accent-hover)] transition"
+            >
+              COMPLETE PROFILE
+            </Link>
+          </div>
+        )}
 
-          {/* ── Section 2: Rating / Division ── */}
-          <Section n={2} title="CLUB LOCKER RATING">
-            {!hasNoRating && (
-              <div className="mb-4">
-                <label className={labelCls}>WHAT IS YOUR CURRENT CLUB LOCKER RATING? <span className="text-red-400">*</span></label>
-                <input
-                  type="number"
-                  value={rating}
-                  onChange={(e) => setRating(e.target.value)}
-                  placeholder="e.g. 4.5"
-                  step="0.01"
-                  min="0"
-                  max="7"
-                  className={inputCls}
-                />
-                {rating && !isNaN(parseFloat(rating)) && (
-                  <p className="text-[var(--sl-accent)] text-xs mt-2 font-semibold">
-                    Auto-assigned division: <span className="font-bold">{ratingToDivision(parseFloat(rating))}</span>
-                  </p>
+        {/* ── Confirm ── */}
+        {(state === 'confirm' || state === 'submitting') && player && (
+          <div className="space-y-4">
+
+            {/* Profile summary card — read only */}
+            <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6">
+              <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-4">YOUR REGISTRATION DETAILS</p>
+              <div className="space-y-3">
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--sl-text-40)]">Name</span>
+                  <span className="font-semibold">{player.first_name} {player.last_name}</span>
+                </div>
+                {player.club_name && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-[var(--sl-text-40)]">Club</span>
+                    <span className="font-medium">{player.club_name}</span>
+                  </div>
                 )}
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--sl-text-40)]">Rating (USR)</span>
+                  <span className="font-medium">{player.usr_rating}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-[var(--sl-text-40)]">Division</span>
+                  <span className="text-[var(--sl-accent)] font-bold tracking-widest">{division}</span>
+                </div>
               </div>
-            )}
-
-            <label className="flex items-center gap-3 cursor-pointer select-none mb-4">
-              <div
-                onClick={() => { setHasNoRating(!hasNoRating); setSelectedDivision(null) }}
-                className={`w-5 h-5 rounded border-2 flex items-center justify-center transition ${
-                  hasNoRating
-                    ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)]'
-                    : 'border-[var(--sl-text-20)] bg-transparent'
-                }`}
-              >
-                {hasNoRating && <span className="text-[var(--sl-btn-text)] text-xs font-bold">✓</span>}
+              <div className="mt-4 pt-4 border-t border-[var(--sl-border)]">
+                <Link href={`/profile?next=/tournament/${id}/register`} className="text-xs text-[var(--sl-text-30)] hover:text-[var(--sl-accent)] transition">
+                  Not right? Update your profile →
+                </Link>
               </div>
-              <span className="text-sm text-[var(--sl-text-60)]">I don&apos;t have a Club Locker rating</span>
-            </label>
+            </div>
 
-            {hasNoRating && (
-              <div>
-                <p className={labelCls + ' mb-3'}>SELECT YOUR DIVISION <span className="text-red-400">*</span></p>
+            {/* Division confirmation */}
+            <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6">
+              <p className="text-sm font-semibold mb-5">
+                Is <span className="text-[var(--sl-accent)] font-bold">{division} Grade</span> still your current division?
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setDivisionConfirmed(true)}
+                  className={`py-3.5 rounded-xl text-sm font-bold tracking-widest border transition ${
+                    divisionConfirmed === true
+                      ? 'bg-[var(--sl-accent)] text-[var(--sl-btn-text)] border-[var(--sl-accent)]'
+                      : 'border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-accent)] hover:text-[var(--sl-accent)]'
+                  }`}
+                >
+                  YES
+                </button>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/profile?next=/tournament/${id}/register`)}
+                  className="py-3.5 rounded-xl text-sm font-bold tracking-widest border border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-text-20)] transition"
+                >
+                  NO — UPDATE
+                </button>
+              </div>
+            </div>
+
+            {/* Event selection — only shown once division confirmed, if tournament has both */}
+            {canProceed && tournament && tournament.has_singles && tournament.has_doubles && (
+              <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6">
+                <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-4">EVENT</p>
                 <div className="space-y-2">
-                  {DIVISION_CARDS.map((d) => (
-                    <button
-                      key={d.label}
-                      type="button"
-                      onClick={() => setSelectedDivision(d.label)}
-                      className={`w-full text-left px-4 py-3 rounded-xl border transition ${
-                        selectedDivision === d.label
-                          ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)] text-[var(--sl-text)]'
-                          : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-80)]'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <span className={`font-bold text-sm tracking-widest ${selectedDivision === d.label ? 'text-[var(--sl-accent)]' : 'text-[var(--sl-text-80)]'}`}>
-                            {d.label}
-                          </span>
-                          <span className="text-xs text-[var(--sl-text-40)] ml-3">{d.subtitle}</span>
-                        </div>
-                        <span className="text-xs text-[var(--sl-text-30)] shrink-0 ml-2">USR {d.range}</span>
+                  {[
+                    { value: 'singles' as EventType, label: 'Singles', fee: tournament.singles_fee },
+                    { value: 'doubles' as EventType, label: 'Doubles', fee: tournament.doubles_fee },
+                    { value: 'both' as EventType,    label: 'Singles + Doubles', fee: (tournament.singles_fee ?? 0) + (tournament.doubles_fee ?? 0) },
+                  ].map(({ value, label, fee }) => (
+                    <label key={value} className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
+                      eventType === value
+                        ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)]'
+                        : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] hover:border-[var(--sl-text-20)]'
+                    }`}>
+                      <div className="flex items-center gap-3">
+                        <input
+                          type="radio"
+                          name="event"
+                          value={value}
+                          checked={eventType === value}
+                          onChange={() => setEventType(value)}
+                          className="accent-[var(--sl-accent)]"
+                        />
+                        <span className="text-sm font-semibold">{label}</span>
                       </div>
-                    </button>
+                      {fee != null && fee > 0 && (
+                        <span className="text-[var(--sl-accent)] font-bold text-sm">${fee}</span>
+                      )}
+                    </label>
                   ))}
                 </div>
-                <p className="text-[var(--sl-text-20)] text-xs mt-4 leading-relaxed">
-                  The Tournament Director reserves the right to reassign divisions based on known playing level.
-                </p>
               </div>
             )}
 
-            {!hasNoRating && (
-              <p className="text-[var(--sl-text-20)] text-xs leading-relaxed">
-                The Tournament Director reserves the right to reassign divisions based on known playing level.
-              </p>
+            {/* Summary + CTA */}
+            {canProceed && (
+              <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6">
+                <div className="flex justify-between text-sm mb-2">
+                  <span className="text-[var(--sl-text-40)]">Entry Fee</span>
+                  <span className="text-[var(--sl-accent)] font-bold text-lg">
+                    {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
+                  </span>
+                </div>
+
+                {error && (
+                  <p className="text-red-400 text-sm mb-4">{error}</p>
+                )}
+
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={state === 'submitting'}
+                  className="w-full py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 mt-2"
+                >
+                  {state === 'submitting' ? 'REGISTERING...' : 'PROCEED TO PAYMENT'}
+                </button>
+              </div>
             )}
-          </Section>
+          </div>
+        )}
 
-          {/* ── Section 3: Event Selection ── */}
-          {tournament && (tournament.has_singles || tournament.has_doubles) && (
-            <Section n={3} title="EVENT SELECTION">
-              <div className="space-y-2">
-                {tournament.has_singles && (
-                  <label className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
-                    eventType === 'singles'
-                      ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)]'
-                      : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] hover:border-[var(--sl-text-20)]'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="event" value="singles" checked={eventType === 'singles'} onChange={() => setEventType('singles')} />
-                      <span className="text-sm font-semibold text-[var(--sl-text)]">Singles</span>
-                    </div>
-                    {tournament.singles_fee != null && (
-                      <span className="text-[var(--sl-accent)] font-bold text-sm">${tournament.singles_fee}</span>
-                    )}
-                  </label>
-                )}
-                {tournament.has_doubles && (
-                  <label className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
-                    eventType === 'doubles'
-                      ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)]'
-                      : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] hover:border-[var(--sl-text-20)]'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="event" value="doubles" checked={eventType === 'doubles'} onChange={() => setEventType('doubles')} />
-                      <span className="text-sm font-semibold text-[var(--sl-text)]">Doubles</span>
-                    </div>
-                    {tournament.doubles_fee != null && (
-                      <span className="text-[var(--sl-accent)] font-bold text-sm">${tournament.doubles_fee}</span>
-                    )}
-                  </label>
-                )}
-                {tournament.has_singles && tournament.has_doubles && (
-                  <label className={`flex items-center justify-between px-4 py-3 rounded-xl border cursor-pointer transition ${
-                    eventType === 'both'
-                      ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)]'
-                      : 'bg-[var(--sl-surface-deep)] border-[var(--sl-border)] hover:border-[var(--sl-text-20)]'
-                  }`}>
-                    <div className="flex items-center gap-3">
-                      <input type="radio" name="event" value="both" checked={eventType === 'both'} onChange={() => setEventType('both')} />
-                      <span className="text-sm font-semibold text-[var(--sl-text)]">Singles + Doubles</span>
-                    </div>
-                    {tournament.singles_fee != null && tournament.doubles_fee != null && (
-                      <span className="text-[var(--sl-accent)] font-bold text-sm">
-                        ${tournament.singles_fee + tournament.doubles_fee}
-                      </span>
-                    )}
-                  </label>
-                )}
-              </div>
-            </Section>
-          )}
-
-          {/* ── Section 4: Clothing Sizes (if tournament includes clothing) ── */}
-          {tournament?.has_clothing && (
-            <Section n={4} title="CLOTHING SIZES">
-              <p className="text-[var(--sl-text-30)] text-xs mb-4">
-                Your entry includes custom SQSH.LIFE apparel. Select your sizes below.
-              </p>
-              {(['T-SHIRT', 'SWEATER', 'TRACKPANT'] as const).map((item) => {
-                const val = item === 'T-SHIRT' ? tshirtSize : item === 'SWEATER' ? sweaterSize : trackpantSize
-                const setter = item === 'T-SHIRT' ? setTshirtSize : item === 'SWEATER' ? setSweaterSize : setTrackpantSize
-                return (
-                  <div key={item} className="mb-3">
-                    <label className={labelCls}>{item} SIZE <span className="text-red-400">*</span></label>
-                    <select value={val} onChange={e => setter(e.target.value)} className={inputCls}>
-                      <option value="">Select size…</option>
-                      {['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'].map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-                )
-              })}
-            </Section>
-          )}
-
-          {/* ── Summary + Payment ── */}
-          <Section n={tournament?.has_clothing ? 5 : 4} title="SUMMARY">
-            <div className="space-y-3 mb-6">
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--sl-text-40)]">Name</span>
-                <span className="text-[var(--sl-text)] font-medium">
-                  {firstName || lastName ? `${firstName} ${lastName}`.trim() : <span className="text-[var(--sl-text-20)]">—</span>}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--sl-text-40)]">Division</span>
-                <span className={`font-bold tracking-widest text-sm ${assignedDivision ? 'text-[var(--sl-accent)]' : 'text-[var(--sl-text-20)]'}`}>
-                  {assignedDivision ?? '—'}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-[var(--sl-text-40)]">Event</span>
-                <span className="text-[var(--sl-text)] capitalize">{eventType.replace('both', 'Singles + Doubles')}</span>
-              </div>
-              <div className="h-px bg-[var(--sl-border)]" />
-              <div className="flex justify-between">
-                <span className="text-[var(--sl-text-40)] text-sm">Entry Fee</span>
-                <span className="text-[var(--sl-accent)] font-bold text-lg">
-                  {entryFee != null ? `$${entryFee}` : <span className="text-[var(--sl-text-20)] text-sm">—</span>}
-                </span>
-              </div>
+        {/* ── Success ── */}
+        {state === 'success' && (
+          <div className="bg-[var(--sl-surface)] border border-[var(--sl-accent-30)] rounded-2xl p-8 text-center">
+            <div className="w-12 h-12 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] flex items-center justify-center mx-auto mb-4">
+              <span className="text-[var(--sl-accent)] text-xl font-bold">✓</span>
             </div>
-
-            {error && (
-              <p className="text-red-400 text-sm mb-4">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-full py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-30 disabled:cursor-not-allowed"
-            >
-              PROCEED TO PAYMENT
-            </button>
-
-            {!canSubmit && (
-              <p className="text-[var(--sl-text-20)] text-xs text-center mt-3">
-                {!assignedDivision
-                  ? 'Enter your rating or select a division to continue'
-                  : 'Complete all required fields to continue'}
-              </p>
-            )}
-          </Section>
-
-        </form>
+            <h2 className="text-base font-bold tracking-widest text-[var(--sl-accent)] mb-2">REGISTERED!</h2>
+            <p className="text-[var(--sl-text-40)] text-sm">Redirecting to your dashboard…</p>
+          </div>
+        )}
       </div>
     </main>
   )
