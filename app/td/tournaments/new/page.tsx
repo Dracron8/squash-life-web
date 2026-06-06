@@ -1,11 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import SiteLogo from '@/app/components/SiteLogo'
 import ThemeToggle from '@/app/components/ThemeToggle'
+import Fuse from 'fuse.js'
+import CLUBS_RAW from '../../../../squash_clubs.json'
+
+type ClubEntry = { name: string; city: string; region: string; country: string }
+const CLUBS = CLUBS_RAW as ClubEntry[]
 
 const DRAW_TYPES = [
   'Knockout + Plate',
@@ -54,6 +59,24 @@ export default function NewTournamentPage() {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [divisionInput, setDivisionInput] = useState('')
+  const [clubQuery, setClubQuery] = useState('')
+  const [clubOpen, setClubOpen] = useState(false)
+  const [clubFreeText, setClubFreeText] = useState(false)
+  const clubRef = useRef<HTMLDivElement>(null)
+
+  const fuse = useMemo(() => new Fuse(CLUBS, { keys: ['name', 'city'], threshold: 0.4, minMatchCharLength: 1 }), [])
+  const clubResults = useMemo<ClubEntry[]>(() => {
+    if (!clubQuery.trim()) return CLUBS.slice(0, 10)
+    return fuse.search(clubQuery).map(r => r.item).slice(0, 10)
+  }, [clubQuery, fuse])
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (clubRef.current && !clubRef.current.contains(e.target as Node)) setClubOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
 
   const [form, setForm] = useState<FormState>({
     name: '',
@@ -144,20 +167,29 @@ export default function NewTournamentPage() {
 
       if (tErr || !tournament) throw new Error(tErr?.message ?? 'Failed to create tournament')
 
-      // 2. Create club if venue provided
+      // 2. Find or create club if venue provided
       let club_id: string | null = null
       if (form.venue_name.trim()) {
-        const { data: club } = await supabase
+        const { data: existing } = await supabase
           .from('clubs')
-          .insert({
-            td_id: user.id,
-            name: form.venue_name.trim(),
-            address: form.venue_address.trim(),
-            city: form.venue_city.trim(),
-          })
           .select('id')
-          .single()
-        club_id = club?.id ?? null
+          .ilike('name', form.venue_name.trim())
+          .maybeSingle()
+        if (existing) {
+          club_id = existing.id
+        } else {
+          const { data: club } = await supabase
+            .from('clubs')
+            .insert({
+              td_id: user.id,
+              name: form.venue_name.trim(),
+              address: form.venue_address.trim(),
+              city: form.venue_city.trim(),
+            })
+            .select('id')
+            .single()
+          club_id = club?.id ?? null
+        }
       }
 
       // 3. Create tournament_details
@@ -276,12 +308,71 @@ export default function NewTournamentPage() {
 
               <div>
                 <label className={labelClass}>Club / Venue Name</label>
-                <input
-                  className={inputClass}
-                  placeholder="e.g. Beachside Squash Club"
-                  value={form.venue_name}
-                  onChange={e => set('venue_name', e.target.value)}
-                />
+                {clubFreeText ? (
+                  <div className="flex gap-2">
+                    <input
+                      className={`${inputClass} flex-1`}
+                      placeholder="Enter club name"
+                      value={form.venue_name}
+                      onChange={e => set('venue_name', e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setClubFreeText(false); set('venue_name', ''); set('venue_city', '') }}
+                      className="text-[10px] text-[var(--sl-text-30)] hover:text-[var(--sl-accent)] transition whitespace-nowrap px-2"
+                    >
+                      ← Search
+                    </button>
+                  </div>
+                ) : (
+                  <div ref={clubRef} className="relative">
+                    <input
+                      className={inputClass}
+                      value={clubOpen ? clubQuery : (form.venue_name || '')}
+                      onFocus={() => { setClubOpen(true); setClubQuery('') }}
+                      onChange={e => { setClubQuery(e.target.value); set('venue_name', e.target.value) }}
+                      placeholder={form.venue_name || 'Search by club name or city…'}
+                    />
+                    {form.venue_name && !clubOpen && (
+                      <button
+                        type="button"
+                        onClick={() => { set('venue_name', ''); set('venue_city', ''); setClubQuery('') }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--sl-text-30)] hover:text-red-400 text-xs"
+                      >✕</button>
+                    )}
+                    {clubOpen && (
+                      <div className="absolute z-50 top-full left-0 right-0 mt-1 rounded-xl border border-[var(--sl-border)] bg-[var(--sl-surface)] shadow-xl overflow-hidden max-h-56 overflow-y-auto">
+                        {clubResults.length > 0 ? clubResults.map((club, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onMouseDown={e => e.preventDefault()}
+                            onClick={() => {
+                              set('venue_name', club.name)
+                              set('venue_city', club.city)
+                              setClubOpen(false)
+                              setClubQuery('')
+                            }}
+                            className="w-full text-left px-3 py-2.5 hover:bg-[var(--sl-accent-10)] transition flex items-baseline gap-2"
+                          >
+                            <span className="text-sm text-[var(--sl-text)]">{club.name}</span>
+                            <span className="text-xs text-[var(--sl-text-30)]">— {club.city}, {club.region}</span>
+                          </button>
+                        )) : (
+                          <p className="px-3 py-2.5 text-sm text-[var(--sl-text-30)]">No clubs found</p>
+                        )}
+                        <button
+                          type="button"
+                          onMouseDown={e => e.preventDefault()}
+                          onClick={() => { setClubFreeText(true); setClubOpen(false) }}
+                          className="w-full text-left px-3 py-2.5 text-xs text-[var(--sl-accent)] border-t border-[var(--sl-border)] hover:bg-[var(--sl-accent-10)] transition"
+                        >
+                          + My club isn&apos;t listed — add it
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
