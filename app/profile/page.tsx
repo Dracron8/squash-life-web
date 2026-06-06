@@ -115,9 +115,11 @@ export default function ProfilePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/login'); return }
 
+    const emailPrefix = (user.email ?? '').split('@')[0]
     const { error } = await supabase.from('players').upsert({
       user_id:    user.id,
       email:      user.email ?? '',
+      username:   emailPrefix,
       first_name: firstName.trim() || '',
       last_name:  lastName.trim() || '',
       phone:      phone.trim() || '',
