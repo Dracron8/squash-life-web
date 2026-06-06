@@ -33,7 +33,6 @@ type FormState = {
   end_date: string
   singles_fee: string
   registration_deadline: string
-  max_players: string
   // Step 3
   courts_available: string
   match_duration_minutes: string
@@ -88,7 +87,6 @@ export default function NewTournamentPage() {
     end_date: '',
     singles_fee: '',
     registration_deadline: '',
-    max_players: '',
     courts_available: '4',
     match_duration_minutes: '40',
     daily_start_time: '08:00',
@@ -209,7 +207,6 @@ export default function NewTournamentPage() {
           min_rest_minutes: Number(form.min_rest_minutes) || 90,
           singles_fee: form.singles_fee ? Number(form.singles_fee) : 0,
           registration_deadline: form.registration_deadline || null,
-          max_players: form.max_players ? Number(form.max_players) : null,
           format: form.draw_type,
           has_singles_draw: form.has_singles_draw,
           has_doubles_draw: form.has_doubles_draw,
@@ -436,30 +433,17 @@ export default function NewTournamentPage() {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelClass}>Entry Fee (CAD $)</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className={inputClass}
-                  placeholder="0.00"
-                  value={form.singles_fee}
-                  onChange={e => set('singles_fee', e.target.value)}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Max Players</label>
-                <input
-                  type="number"
-                  min="2"
-                  className={inputClass}
-                  placeholder="e.g. 64"
-                  value={form.max_players}
-                  onChange={e => set('max_players', e.target.value)}
-                />
-              </div>
+            <div>
+              <label className={labelClass}>Entry Fee (CAD $)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                className={inputClass}
+                placeholder="0.00"
+                value={form.singles_fee}
+                onChange={e => set('singles_fee', e.target.value)}
+              />
             </div>
           </div>
         )}
