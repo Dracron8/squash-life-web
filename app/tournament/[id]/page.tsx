@@ -199,6 +199,25 @@ export default async function TournamentPage({ params }: Props) {
               {statusLabel}
             </span>
           </div>
+          {isOpen && !isRegistered && (
+            <div className="mt-5">
+              {user ? (
+                <Link
+                  href={`/tournament/${id}/register`}
+                  className="inline-block px-8 py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-base hover:bg-[var(--sl-accent-hover)] transition"
+                >
+                  REGISTER →
+                </Link>
+              ) : (
+                <Link
+                  href={`/login?next=/tournament/${id}`}
+                  className="inline-block px-8 py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-base hover:bg-[var(--sl-accent-hover)] transition"
+                >
+                  SIGN IN TO REGISTER →
+                </Link>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Two-column grid ── */}
@@ -207,38 +226,6 @@ export default async function TournamentPage({ params }: Props) {
           {/* ══ LEFT COLUMN (col-span-2) ══ */}
           <div className="md:col-span-2 space-y-5">
 
-            {/* Top register buttons */}
-            {!isRegistered && (
-              isOpen ? (
-                user ? (
-                  <div className="flex gap-3">
-                    <Link
-                      href={`/tournament/${id}/register`}
-                      className="flex-1 text-center py-4 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-10)] transition"
-                    >
-                      PAY DEPOSIT
-                    </Link>
-                    <Link
-                      href={`/tournament/${id}/register`}
-                      className="flex-1 text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-                    >
-                      PAY IN FULL
-                    </Link>
-                  </div>
-                ) : (
-                  <Link
-                    href={`/login?next=/tournament/${id}`}
-                    className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-                  >
-                    SIGN IN TO REGISTER
-                  </Link>
-                )
-              ) : (
-                <div className="w-full text-center py-3.5 rounded-xl bg-[var(--sl-border-faint)] border border-[var(--sl-border)] text-[var(--sl-text-30)] font-semibold tracking-widest text-sm">
-                  REGISTRATION CLOSED
-                </div>
-              )
-            )}
 
             {/* Combined venue + date/time card */}
             <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-xl p-5 space-y-4">
@@ -374,43 +361,30 @@ export default async function TournamentPage({ params }: Props) {
                 )}
               </div>
 
-              {/* CTA buttons */}
+              {/* CTA button */}
               {isRegistered ? (
                 <div className="w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] text-[var(--sl-accent)] font-semibold tracking-widest text-sm">
                   ✓ REGISTERED
                 </div>
               ) : isOpen ? (
-                <>
-                  {user ? (
-                    <>
-                      <div className="flex gap-2">
-                        <Link
-                          href={`/tournament/${id}/register`}
-                          className="flex-1 text-center py-3 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-10)] transition"
-                        >
-                          PAY DEPOSIT
-                        </Link>
-                        <Link
-                          href={`/tournament/${id}/register`}
-                          className="flex-1 text-center py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-hover)] transition"
-                        >
-                          PAY IN FULL
-                        </Link>
-                      </div>
-                      <p className="text-[var(--sl-text-20)] text-[10px] text-center">Payment processing coming soon</p>
-                    </>
-                  ) : (
-                    <>
-                      <Link
-                        href={`/login?next=/tournament/${id}`}
-                        className="block w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-                      >
-                        SIGN IN TO REGISTER
-                      </Link>
-                      <p className="text-[var(--sl-text-25)] text-xs text-center">Sign in required to register</p>
-                    </>
-                  )}
-                </>
+                user ? (
+                  <Link
+                    href={`/tournament/${id}/register`}
+                    className="block w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+                  >
+                    REGISTER →
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href={`/login?next=/tournament/${id}`}
+                      className="block w-full text-center py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+                    >
+                      SIGN IN TO REGISTER
+                    </Link>
+                    <p className="text-[var(--sl-text-25)] text-xs text-center">Sign in required to register</p>
+                  </>
+                )
               ) : (
                 <div className="w-full text-center py-3.5 rounded-xl bg-[var(--sl-border-faint)] border border-[var(--sl-border)] text-[var(--sl-text-30)] font-semibold tracking-widest text-sm">
                   REGISTRATION CLOSED
@@ -436,29 +410,12 @@ export default async function TournamentPage({ params }: Props) {
       {/* ── Mobile pinned CTA bar ── */}
       {!isRegistered && isOpen && (
         <div className="md:hidden fixed bottom-0 left-0 right-0 p-4 border-t border-[var(--sl-border)] backdrop-blur-sm" style={{ backgroundColor: 'var(--sl-mobile-bar)' }}>
-          {user ? (
-            <div className="flex gap-3">
-              <Link
-                href={`/tournament/${id}/register`}
-                className="flex-1 text-center py-4 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-10)] transition"
-              >
-                PAY DEPOSIT
-              </Link>
-              <Link
-                href={`/tournament/${id}/register`}
-                className="flex-1 text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-              >
-                PAY IN FULL
-              </Link>
-            </div>
-          ) : (
-            <Link
-              href={`/login?next=/tournament/${id}`}
-              className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-            >
-              SIGN IN TO REGISTER
-            </Link>
-          )}
+          <Link
+            href={user ? `/tournament/${id}/register` : `/login?next=/tournament/${id}`}
+            className="block w-full text-center py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+          >
+            {user ? 'REGISTER →' : 'SIGN IN TO REGISTER'}
+          </Link>
         </div>
       )}
 
