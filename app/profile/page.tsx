@@ -124,7 +124,6 @@ export default function ProfilePage() {
       gender:     gender || '',
       usr_rating: usrRating ? parseFloat(usrRating) : null,
       club_name:  noHomeClub ? '' : (homeClub.trim() || ''),
-      updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
 
     setSaving(false)
