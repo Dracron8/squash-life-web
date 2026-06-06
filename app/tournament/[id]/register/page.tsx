@@ -77,6 +77,7 @@ export default function RegisterPage() {
   const [originalRating, setOriginalRating] = useState<number>(3.00)
   const [eventType,      setEventType]      = useState<EventType>('singles')
   const [error,          setError]          = useState<string | null>(null)
+  const [chosenPayment,  setChosenPayment]  = useState<'deposit_paid' | 'fully_paid' | null>(null)
 
   // ── Load ─────────────────────────────────────────────────────────────────
 
@@ -168,8 +169,8 @@ export default function RegisterPage() {
 
     if (insertErr) { setError(insertErr.message); setState('confirm'); return }
 
+    setChosenPayment(paymentStatus)
     setState('success')
-    setTimeout(() => router.push('/dashboard'), 2000)
   }
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -376,15 +377,54 @@ export default function RegisterPage() {
         )}
 
         {/* ── Success ── */}
-        {state === 'success' && (
-          <div className="flex-1 flex items-center justify-center">
-            <div className="bg-[var(--sl-surface)] border border-[var(--sl-accent-30)] rounded-2xl p-8 text-center w-full">
-              <div className="w-10 h-10 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] flex items-center justify-center mx-auto mb-3">
-                <span className="text-[var(--sl-accent)] text-lg font-bold">✓</span>
+        {state === 'success' && player && tournament && (
+          <div className="flex flex-col gap-4">
+
+            {/* Confirmation banner */}
+            <div className="bg-[var(--sl-surface)] border border-[var(--sl-accent-30)] rounded-2xl p-6 text-center">
+              <div className="w-12 h-12 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] flex items-center justify-center mx-auto mb-4">
+                <span className="text-[var(--sl-accent)] text-xl font-bold">✓</span>
               </div>
-              <h2 className="text-sm font-bold tracking-widest text-[var(--sl-accent)] mb-1">REGISTERED!</h2>
-              <p className="text-[var(--sl-text-40)] text-sm">Redirecting to your dashboard…</p>
+              <h2 className="text-base font-bold tracking-widest text-[var(--sl-accent)] mb-3">YOU&apos;RE ON THE LIST!</h2>
+              <p className="text-[var(--sl-text-50)] text-sm leading-relaxed">
+                Payment processing coming soon —<br />
+                we&apos;ll confirm your spot once payment is received.
+              </p>
             </div>
+
+            {/* Registration details */}
+            <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5">
+              <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-4">REGISTRATION DETAILS</p>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                <span className="text-[var(--sl-text-40)] text-xs">Name</span>
+                <span className="font-semibold text-right text-xs">{player.first_name} {player.last_name}</span>
+
+                <span className="text-[var(--sl-text-40)] text-xs">Tournament</span>
+                <span className="font-semibold text-right text-xs leading-snug">{tournament.name}</span>
+
+                <span className="text-[var(--sl-text-40)] text-xs">Division</span>
+                <span className="font-bold text-right text-xs text-[var(--sl-accent)]">{ratingToDivision(rating)} ({rating.toFixed(2)} USR)</span>
+
+                <span className="text-[var(--sl-text-40)] text-xs">Entry Fee</span>
+                <span className="font-bold text-right text-xs text-[var(--sl-accent)]">
+                  {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
+                </span>
+
+                <span className="text-[var(--sl-text-40)] text-xs">Payment</span>
+                <span className={`font-bold text-right text-xs ${chosenPayment === 'fully_paid' ? 'text-green-400' : 'text-yellow-400'}`}>
+                  {chosenPayment === 'fully_paid' ? 'Pay in Full' : 'Deposit'}
+                </span>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard')}
+              className="w-full py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
+            >
+              GO TO MY DASHBOARD
+            </button>
+
           </div>
         )}
 
