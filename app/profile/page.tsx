@@ -36,10 +36,8 @@ export default function ProfilePage() {
   const [lastName, setLastName] = useState('')
   const [phone, setPhone] = useState('')
   const [gender, setGender] = useState('')
-  const [handedness, setHandedness] = useState('')
   const [usrRating, setUsrRating] = useState('')
   const [division, setDivision] = useState('')
-  // date_of_birth field pending DB column addition
   const [homeClub, setHomeClub] = useState('')
   const [noHomeClub, setNoHomeClub] = useState(false)
   const [clubQuery, setClubQuery] = useState('')
@@ -79,24 +77,23 @@ export default function ProfilePage() {
       if (meta.family_name) setLastName(meta.family_name)
       else if (meta.full_name) setLastName(meta.full_name.split(' ').slice(1).join(' '))
 
-      // Override with any existing profile data
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, phone, gender, handedness, usr_rating, division, home_club')
-        .eq('id', user.id)
-        .single()
+      // Load existing player profile
+      const { data: player } = await supabase
+        .from('players')
+        .select('first_name, last_name, phone, gender, usr_rating, club_name')
+        .eq('user_id', user.id)
+        .maybeSingle()
 
-      if (profile) {
-        if (profile.first_name) setFirstName(profile.first_name)
-        if (profile.last_name) setLastName(profile.last_name)
-        if (profile.phone) setPhone(profile.phone)
-        if (profile.gender) setGender(profile.gender)
-        if (profile.date_of_birth) setDob(profile.date_of_birth)
-        if (profile.handedness) setHandedness(profile.handedness)
-        if (profile.usr_rating != null) setUsrRating(String(profile.usr_rating))
-
-        if (profile.division) setDivision(profile.division)
-        if (profile.home_club) setHomeClub(profile.home_club)
+      if (player) {
+        if (player.first_name) setFirstName(player.first_name)
+        if (player.last_name) setLastName(player.last_name)
+        if (player.phone) setPhone(player.phone)
+        if (player.gender) setGender(player.gender)
+        if (player.usr_rating != null) {
+          setUsrRating(String(player.usr_rating))
+          setDivision(ratingToDivision(Number(player.usr_rating)))
+        }
+        if (player.club_name) setHomeClub(player.club_name)
       }
 
       setLoading(false)
@@ -118,18 +115,17 @@ export default function ProfilePage() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.replace('/login'); return }
 
-    const { error } = await supabase.from('profiles').upsert({
-      id: user.id,
-      first_name: firstName.trim() || null,
-      last_name: lastName.trim() || null,
-      phone: phone.trim() || null,
-      gender: gender || null,
-      handedness: handedness || null,
+    const { error } = await supabase.from('players').upsert({
+      user_id:    user.id,
+      email:      user.email ?? '',
+      first_name: firstName.trim() || '',
+      last_name:  lastName.trim() || '',
+      phone:      phone.trim() || '',
+      gender:     gender || '',
       usr_rating: usrRating ? parseFloat(usrRating) : null,
-      division: division || null,
-      home_club: noHomeClub ? null : (homeClub.trim() || null),
+      club_name:  noHomeClub ? '' : (homeClub.trim() || ''),
       updated_at: new Date().toISOString(),
-    })
+    }, { onConflict: 'user_id' })
 
     setSaving(false)
     if (error) {
@@ -185,23 +181,13 @@ export default function ProfilePage() {
               <label className={labelCls}>PHONE</label>
               <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (416) 555-0100" className={inputCls} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>GENDER</label>
-                <select value={gender} onChange={e => setGender(e.target.value)} className={inputCls}>
-                  <option value="">Select…</option>
-                  <option>Male</option>
-                  <option>Female</option>
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>HANDEDNESS</label>
-                <select value={handedness} onChange={e => setHandedness(e.target.value)} className={inputCls}>
-                  <option value="">Select…</option>
-                  <option>Right</option>
-                  <option>Left</option>
-                </select>
-              </div>
+            <div>
+              <label className={labelCls}>GENDER</label>
+              <select value={gender} onChange={e => setGender(e.target.value)} className={inputCls}>
+                <option value="">Select…</option>
+                <option>Male</option>
+                <option>Female</option>
+              </select>
             </div>
             {/* Home Club */}
             <div ref={clubRef}>
