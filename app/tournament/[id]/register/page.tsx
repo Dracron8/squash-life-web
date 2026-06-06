@@ -236,7 +236,7 @@ export default function RegisterPage() {
         <Link href="/"><SiteLogo /></Link>
         <div className="flex items-center gap-4">
           <ThemeToggle />
-          <Link href={`/tournament/${id}`} className="text-xs font-semibold tracking-widest text-[var(--sl-text-30)] hover:text-[var(--sl-text-60)] transition">
+          <Link href={`/tournament/${id}`} className="text-xs font-semibold tracking-widest text-[var(--sl-accent)] hover:text-[var(--sl-accent)] transition">
             ← BACK
           </Link>
         </div>
@@ -247,7 +247,7 @@ export default function RegisterPage() {
 
         {/* Title */}
         <div className="mb-6">
-          <p className="text-[var(--sl-text-30)] text-[10px] tracking-widest uppercase mb-0.5">Registration</p>
+          <p className="text-[var(--sl-accent)] text-[10px] tracking-widest uppercase mb-0.5">Registration</p>
           <h1 className="text-xl font-bold tracking-wider leading-tight">{tournament?.name ?? '...'}</h1>
         </div>
 
@@ -265,7 +265,7 @@ export default function RegisterPage() {
               <span className="text-[var(--sl-accent)] text-lg font-bold">!</span>
             </div>
             <h2 className="text-sm font-bold tracking-widest mb-2">COMPLETE YOUR PROFILE FIRST</h2>
-            <p className="text-[var(--sl-text-40)] text-sm mb-5 leading-relaxed">
+            <p className="text-[var(--sl-accent)] text-sm mb-5 leading-relaxed">
               We need your name and Club Locker rating to place you in the right division.
             </p>
             <Link
@@ -283,14 +283,14 @@ export default function RegisterPage() {
 
             {/* ── LEFT — Tournament info ── */}
             <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5 space-y-5">
-              <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">TOURNAMENT INFO</p>
+              <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">TOURNAMENT INFO</p>
 
               {tournament.venue_name && (
                 <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">VENUE</p>
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">VENUE</p>
                   <p className="font-semibold text-[var(--sl-text)] text-sm leading-snug">{tournament.venue_name}</p>
                   {tournament.venue_address && (
-                    <p className="text-[var(--sl-text-50)] text-xs mt-0.5 leading-relaxed">
+                    <p className="text-[var(--sl-accent)] text-xs mt-0.5 leading-relaxed">
                       {[tournament.venue_address, tournament.venue_city, tournament.venue_province, tournament.venue_country].filter(Boolean).join(', ')}
                     </p>
                   )}
@@ -299,8 +299,8 @@ export default function RegisterPage() {
 
               {tournament.start_date && (
                 <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">DATE</p>
-                  <p className="text-[var(--sl-text-60)] text-sm">
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">DATE</p>
+                  <p className="text-[var(--sl-accent)] text-sm">
                     {formatDateShort(tournament.start_date)}
                     {tournament.end_date && tournament.end_date !== tournament.start_date
                       ? ` — ${formatDateShort(tournament.end_date)}`
@@ -311,8 +311,8 @@ export default function RegisterPage() {
 
               {tournament.daily_start_time && tournament.daily_end_time && (
                 <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">MATCH TIMES</p>
-                  <p className="text-[var(--sl-text-60)] text-sm">
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">MATCH TIMES</p>
+                  <p className="text-[var(--sl-accent)] text-sm">
                     {formatTime(tournament.daily_start_time)} — {formatTime(tournament.daily_end_time)}
                   </p>
                 </div>
@@ -339,10 +339,10 @@ export default function RegisterPage() {
                   {/* Player details + rating */}
                   <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-4">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
-                      <span className="text-[var(--sl-text-40)] text-xs">Name</span>
+                      <span className="text-[var(--sl-accent)] text-xs">Name</span>
                       <span className="font-semibold text-right text-xs">{player.first_name} {player.last_name}</span>
                       {player.club_name && <>
-                        <span className="text-[var(--sl-text-40)] text-xs">Club</span>
+                        <span className="text-[var(--sl-accent)] text-xs">Club</span>
                         <span className="font-medium text-right text-xs truncate">{player.club_name}</span>
                       </>}
                     </div>
@@ -352,13 +352,13 @@ export default function RegisterPage() {
                     {/* Rating editor */}
                     <div className="flex items-center gap-3">
                       <div className="shrink-0">
-                        <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">RATING (USR)</p>
+                        <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">RATING (USR)</p>
                         <div className="flex items-center gap-2">
                           <button
                             type="button"
                             onClick={() => setRating(r => adjustRating(r, -RATING_STEP))}
                             disabled={rating <= RATING_MIN}
-                            className="w-8 h-8 rounded-lg border border-[var(--sl-border)] text-[var(--sl-text-60)] font-bold hover:border-[var(--sl-accent)] hover:text-[var(--sl-accent)] disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
+                            className="w-8 h-8 rounded-lg border border-[var(--sl-border)] text-[var(--sl-accent)] font-bold hover:border-[var(--sl-accent)] hover:text-[var(--sl-accent)] disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
                           >−</button>
                           <span className="text-2xl font-bold tracking-tight w-16 text-center tabular-nums">
                             {rating.toFixed(2)}
@@ -367,20 +367,20 @@ export default function RegisterPage() {
                             type="button"
                             onClick={() => setRating(r => adjustRating(r, +RATING_STEP))}
                             disabled={rating >= RATING_MAX}
-                            className="w-8 h-8 rounded-lg border border-[var(--sl-border)] text-[var(--sl-text-60)] font-bold hover:border-[var(--sl-accent)] hover:text-[var(--sl-accent)] disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
+                            className="w-8 h-8 rounded-lg border border-[var(--sl-border)] text-[var(--sl-accent)] font-bold hover:border-[var(--sl-accent)] hover:text-[var(--sl-accent)] disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
                           >+</button>
                         </div>
-                        <p className="text-[var(--sl-text-20)] text-[10px] mt-1">
+                        <p className="text-[var(--sl-accent)] text-[10px] mt-1">
                           Verify Current Rating
                         </p>
                       </div>
 
                       {/* Division badge */}
                       <div className="flex-1 flex flex-col items-end gap-1">
-                        <span className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">DIVISION</span>
+                        <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">DIVISION</span>
                         <span className="text-3xl font-bold text-[var(--sl-accent)] tracking-wider">{division}</span>
                         {ratingChanged && (
-                          <span className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] px-2 py-0.5 rounded">
+                          <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] px-2 py-0.5 rounded">
                             profile will update
                           </span>
                         )}
@@ -390,7 +390,7 @@ export default function RegisterPage() {
                     <div className="mt-3 pt-3 border-t border-[var(--sl-border)]">
                       <Link
                         href={`/profile?next=/tournament/${id}/register`}
-                        className="text-[10px] text-[var(--sl-text-30)] hover:text-[var(--sl-accent)] transition"
+                        className="text-[10px] text-[var(--sl-accent)] hover:text-[var(--sl-accent)] transition"
                       >
                         Wrong name or club? Update your profile →
                       </Link>
@@ -400,7 +400,7 @@ export default function RegisterPage() {
                   {/* Event selection — only if both */}
                   {hasBothEvents && (
                     <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-4">
-                      <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-3">EVENT</p>
+                      <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-3">EVENT</p>
                       <div className="grid grid-cols-3 gap-2">
                         {([
                           { value: 'singles' as EventType, label: 'Singles', fee: tournament.singles_fee },
@@ -414,7 +414,7 @@ export default function RegisterPage() {
                             className={`px-3 py-2.5 rounded-xl border text-xs font-bold tracking-widest transition text-center ${
                               eventType === value
                                 ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)] text-[var(--sl-accent)]'
-                                : 'border-[var(--sl-border)] text-[var(--sl-text-40)] hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)]'
+                                : 'border-[var(--sl-border)] text-[var(--sl-accent)] hover:border-[var(--sl-text-20)] hover:text-[var(--sl-accent)]'
                             }`}
                           >
                             <div>{label}</div>
@@ -429,12 +429,12 @@ export default function RegisterPage() {
                   <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-4">
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center gap-3">
-                        <span className="text-[var(--sl-text-40)] text-sm">Entry Fee</span>
+                        <span className="text-[var(--sl-accent)] text-sm">Entry Fee</span>
                         <span className="text-[var(--sl-accent)] font-bold text-xl">
                           {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
                         </span>
                       </div>
-                      <span className="text-[var(--sl-text-30)] text-xs">
+                      <span className="text-[var(--sl-accent)] text-xs">
                         {division} Grade · {rating.toFixed(2)} USR
                       </span>
                     </div>
@@ -459,7 +459,7 @@ export default function RegisterPage() {
                         {state === 'submitting' ? '...' : 'PAY IN FULL'}
                       </button>
                     </div>
-                    <p className="text-[var(--sl-text-20)] text-[10px] text-center tracking-wide mt-1">
+                    <p className="text-[var(--sl-accent)] text-[10px] text-center tracking-wide mt-1">
                       Payment processing coming soon
                     </p>
                   </div>
@@ -474,30 +474,30 @@ export default function RegisterPage() {
                       <span className="text-[var(--sl-accent)] text-xl font-bold">✓</span>
                     </div>
                     <h2 className="text-base font-bold tracking-widest text-[var(--sl-accent)] mb-3">YOU&apos;RE ON THE LIST!</h2>
-                    <p className="text-[var(--sl-text-50)] text-sm leading-relaxed">
+                    <p className="text-[var(--sl-accent)] text-sm leading-relaxed">
                       Payment processing coming soon —<br />
                       we&apos;ll confirm your spot once payment is received.
                     </p>
                   </div>
 
                   <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5">
-                    <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-4">REGISTRATION DETAILS</p>
+                    <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-4">REGISTRATION DETAILS</p>
                     <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <span className="text-[var(--sl-text-40)] text-xs">Name</span>
+                      <span className="text-[var(--sl-accent)] text-xs">Name</span>
                       <span className="font-semibold text-right text-xs">{player.first_name} {player.last_name}</span>
 
-                      <span className="text-[var(--sl-text-40)] text-xs">Tournament</span>
+                      <span className="text-[var(--sl-accent)] text-xs">Tournament</span>
                       <span className="font-semibold text-right text-xs leading-snug">{tournament.name}</span>
 
-                      <span className="text-[var(--sl-text-40)] text-xs">Division</span>
+                      <span className="text-[var(--sl-accent)] text-xs">Division</span>
                       <span className="font-bold text-right text-xs text-[var(--sl-accent)]">{ratingToDivision(rating)} ({rating.toFixed(2)} USR)</span>
 
-                      <span className="text-[var(--sl-text-40)] text-xs">Entry Fee</span>
+                      <span className="text-[var(--sl-accent)] text-xs">Entry Fee</span>
                       <span className="font-bold text-right text-xs text-[var(--sl-accent)]">
                         {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
                       </span>
 
-                      <span className="text-[var(--sl-text-40)] text-xs">Payment</span>
+                      <span className="text-[var(--sl-accent)] text-xs">Payment</span>
                       <span className={`font-bold text-right text-xs ${chosenPayment === 'fully_paid' ? 'text-green-400' : 'text-yellow-400'}`}>
                         {chosenPayment === 'fully_paid' ? 'Pay in Full' : 'Deposit'}
                       </span>
