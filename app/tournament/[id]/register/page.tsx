@@ -4,8 +4,6 @@ import { useParams, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import ThemeToggle from '@/app/components/ThemeToggle'
-import SiteLogo from '@/app/components/SiteLogo'
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -83,6 +81,18 @@ type PageState = 'loading' | 'incomplete' | 'confirm' | 'submitting' | 'success'
 
 function isProfileComplete(p: PlayerProfile): boolean {
   return !!(p.first_name.trim() && p.last_name.trim() && p.usr_rating != null)
+}
+
+const SIDEBAR_STYLE = {
+  background: 'linear-gradient(to bottom, #1a0a0a, #2a1010, #111)',
+  borderTop: '4px solid #C0392B',
+  borderBottom: '4px solid #C0392B',
+}
+
+const CARD_STYLE = {
+  background: 'rgba(255,255,255,0.18)',
+  backdropFilter: 'blur(12px)',
+  border: '1.5px solid rgba(192,57,43,0.3)',
 }
 
 // ── Main component ───────────────────────────────────────────────────────────
@@ -229,296 +239,317 @@ export default function RegisterPage() {
   // ── Render ────────────────────────────────────────────────────────────────
 
   return (
-    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)] flex flex-col">
+    <div className="flex h-screen overflow-hidden">
 
-      {/* Header */}
-      <header className="shrink-0 border-b border-[var(--sl-border)] px-6 py-3 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/"><SiteLogo /></Link>
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <Link href={`/tournament/${id}`} className="text-xs font-semibold tracking-widest text-[var(--sl-accent)] hover:text-[var(--sl-accent)] transition">
+      {/* LEFT SIDEBAR */}
+      <div className="w-[70px] flex-shrink-0 relative" style={SIDEBAR_STYLE}>
+        <div className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }} />
+      </div>
+
+      {/* MAIN */}
+      <div className="flex-1 overflow-y-auto" style={{
+        backgroundImage: "url('/COURTNFLOOR.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center 70%',
+        backgroundAttachment: 'fixed',
+        backgroundColor: '#1a0a0a',
+      }}>
+
+        {/* HEADER */}
+        <div className="flex items-center justify-between px-8 py-4"
+          style={{ borderBottom: '1px solid rgba(192,57,43,0.25)', backdropFilter: 'blur(12px)' }}>
+          <Link href="/" className="flex flex-col items-start">
+            <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" className="h-12 w-auto" />
+            <p className="text-sm font-bold tracking-[0.22em] uppercase mt-0.5" style={{ color: '#222' }}>
+              Registration
+            </p>
+          </Link>
+          <Link href={`/tournament/${id}`}
+            className="text-[10px] font-bold tracking-[0.14em] uppercase px-4 py-2 rounded-lg transition hover:opacity-80"
+            style={{ color: '#C0392B', border: '1.5px solid rgba(192,57,43,0.4)' }}>
             ← BACK
           </Link>
         </div>
-      </header>
 
-      {/* Content */}
-      <div className="flex-1 px-4 py-6 max-w-5xl mx-auto w-full">
+        {/* CONTENT */}
+        <div className="max-w-4xl mx-auto px-8 py-8">
 
-        {/* Title */}
-        <div className="mb-6">
-          <p className="text-[var(--sl-accent)] text-[10px] tracking-widest uppercase mb-0.5">Registration</p>
-          <h1 className="text-xl font-bold tracking-wider leading-tight">{tournament?.name ?? '...'}</h1>
-        </div>
+          <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.4)' }}>Registration</p>
+          <h1 className="text-xl font-bold tracking-[0.14em] mb-6" style={{ color: '#111' }}>{tournament?.name ?? '…'}</h1>
 
-        {/* ── Loading ── */}
-        {state === 'loading' && (
-          <div className="flex items-center justify-center py-20">
-            <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-
-        {/* ── Incomplete profile ── */}
-        {state === 'incomplete' && (
-          <div className="max-w-md mx-auto bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-8 text-center">
-            <div className="w-10 h-10 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] flex items-center justify-center mx-auto mb-3">
-              <span className="text-[var(--sl-accent)] text-lg font-bold">!</span>
+          {/* Loading */}
+          {state === 'loading' && (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-2 border-[#C0392B] border-t-transparent rounded-full animate-spin" />
             </div>
-            <h2 className="text-sm font-bold tracking-widest mb-2">COMPLETE YOUR PROFILE FIRST</h2>
-            <p className="text-[var(--sl-accent)] text-sm mb-5 leading-relaxed">
-              We need your name and Club Locker rating to place you in the right division.
-            </p>
-            <Link
-              href={`/profile?next=/tournament/${id}/register`}
-              className="inline-block text-sm font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] px-6 py-2.5 rounded-xl hover:bg-[var(--sl-accent-hover)] transition"
-            >
-              COMPLETE PROFILE
-            </Link>
-          </div>
-        )}
+          )}
 
-        {/* ── Two-column layout ── */}
-        {(state === 'confirm' || state === 'submitting' || state === 'success') && player && tournament && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-
-            {/* ── LEFT — Tournament info ── */}
-            <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5 space-y-5">
-              <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">TOURNAMENT INFO</p>
-
-              {tournament.venue_name && (
-                <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">VENUE</p>
-                  <p className="font-semibold text-[var(--sl-text)] text-sm leading-snug">{tournament.venue_name}</p>
-                  {tournament.venue_address && (
-                    <p className="text-[var(--sl-accent)] text-xs mt-0.5 leading-relaxed">
-                      {[tournament.venue_address, tournament.venue_city, tournament.venue_province, tournament.venue_country].filter(Boolean).join(', ')}
-                    </p>
-                  )}
-                </div>
-              )}
-
-              {tournament.start_date && (
-                <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">DATE</p>
-                  <p className="text-[var(--sl-accent)] text-sm">
-                    {formatDateShort(tournament.start_date)}
-                    {tournament.end_date && tournament.end_date !== tournament.start_date
-                      ? ` — ${formatDateShort(tournament.end_date)}`
-                      : ''}
-                  </p>
-                </div>
-              )}
-
-              {tournament.daily_start_time && tournament.daily_end_time && (
-                <div>
-                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">MATCH TIMES</p>
-                  <p className="text-[var(--sl-accent)] text-sm">
-                    {formatTime(tournament.daily_start_time)} — {formatTime(tournament.daily_end_time)}
-                  </p>
-                </div>
-              )}
-
-              {mapsUrl && (
-                <a
-                  href={mapsUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-xs font-bold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-4 py-2 rounded-lg hover:bg-[var(--sl-accent-10)] transition"
-                >
-                  GET DIRECTIONS ↗
-                </a>
-              )}
+          {/* Incomplete profile */}
+          {state === 'incomplete' && (
+            <div className="max-w-md mx-auto rounded-2xl p-8 text-center" style={CARD_STYLE}>
+              <div className="w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-3"
+                style={{ background: 'rgba(192,57,43,0.1)', border: '1.5px solid rgba(192,57,43,0.3)' }}>
+                <span className="text-lg font-bold" style={{ color: '#C0392B' }}>!</span>
+              </div>
+              <h2 className="text-sm font-bold tracking-[0.14em] uppercase mb-2" style={{ color: '#111' }}>COMPLETE YOUR PROFILE FIRST</h2>
+              <p className="text-sm mb-5 leading-relaxed" style={{ color: '#666' }}>
+                We need your name and Club Locker rating to place you in the right division.
+              </p>
+              <Link
+                href={`/profile?next=/tournament/${id}/register`}
+                className="inline-block text-sm font-bold tracking-[0.14em] uppercase text-white px-6 py-2.5 rounded-xl transition hover:opacity-90"
+                style={{ background: '#C0392B' }}>
+                COMPLETE PROFILE
+              </Link>
             </div>
+          )}
 
-            {/* ── RIGHT — Registration form or success ── */}
-            <div className="flex flex-col gap-3">
+          {/* Two-column layout */}
+          {(state === 'confirm' || state === 'submitting' || state === 'success') && player && tournament && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
 
-              {/* Confirm / Submitting */}
-              {(state === 'confirm' || state === 'submitting') && (
-                <>
-                  {/* Player details + rating */}
-                  <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-4">
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
-                      <span className="text-[var(--sl-accent)] text-xs">Name</span>
-                      <span className="font-semibold text-right text-xs">{player.first_name} {player.last_name}</span>
-                      {player.club_name && <>
-                        <span className="text-[var(--sl-accent)] text-xs">Club</span>
-                        <span className="font-medium text-right text-xs truncate">{player.club_name}</span>
-                      </>}
-                    </div>
+              {/* LEFT — Tournament info */}
+              <div className="rounded-2xl p-5 space-y-4" style={CARD_STYLE}>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'rgba(0,0,0,0.4)' }}>TOURNAMENT INFO</p>
 
-                    <div className="h-px bg-[var(--sl-border)] mb-4" />
-
-                    {/* Rating editor */}
-                    <div className="flex items-center gap-3">
-                      <div className="shrink-0">
-                        <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-1">RATING (USR)</p>
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => setRating(r => adjustRating(r, -RATING_STEP))}
-                            disabled={rating <= RATING_MIN}
-                            className="w-8 h-8 rounded-lg border border-[var(--sl-border)] text-[var(--sl-accent)] font-bold hover:border-[var(--sl-accent)] hover:text-[var(--sl-accent)] disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
-                          >−</button>
-                          <span className="text-2xl font-bold tracking-tight w-16 text-center tabular-nums">
-                            {rating.toFixed(2)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => setRating(r => adjustRating(r, +RATING_STEP))}
-                            disabled={rating >= RATING_MAX}
-                            className="w-8 h-8 rounded-lg border border-[var(--sl-border)] text-[var(--sl-accent)] font-bold hover:border-[var(--sl-accent)] hover:text-[var(--sl-accent)] disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
-                          >+</button>
-                        </div>
-                        <p className="text-[var(--sl-accent)] text-[10px] mt-1">
-                          Verify Current Rating
-                        </p>
-                      </div>
-
-                      {/* Division badge */}
-                      <div className="flex-1 flex flex-col items-end gap-1">
-                        <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">DIVISION</span>
-                        <span className="text-3xl font-bold text-[var(--sl-accent)] tracking-wider">{division}</span>
-                        {ratingChanged && (
-                          <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] px-2 py-0.5 rounded">
-                            profile will update
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-3 pt-3 border-t border-[var(--sl-border)]">
-                      <Link
-                        href={`/profile?next=/tournament/${id}/register`}
-                        className="text-[10px] text-[var(--sl-accent)] hover:text-[var(--sl-accent)] transition"
-                      >
-                        Wrong name or club? Update your profile →
-                      </Link>
-                    </div>
+                {tournament.venue_name && (
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.4)' }}>VENUE</p>
+                    <p className="font-semibold text-sm leading-snug" style={{ color: '#111' }}>{tournament.venue_name}</p>
+                    {tournament.venue_address && (
+                      <p className="text-xs mt-0.5 leading-relaxed" style={{ color: '#666' }}>
+                        {[tournament.venue_address, tournament.venue_city, tournament.venue_province, tournament.venue_country].filter(Boolean).join(', ')}
+                      </p>
+                    )}
                   </div>
+                )}
 
-                  {/* Event selection — only if both */}
-                  {hasBothEvents && (
-                    <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-4">
-                      <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-3">EVENT</p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {([
-                          { value: 'singles' as EventType, label: 'Singles', fee: tournament.singles_fee },
-                          { value: 'doubles' as EventType, label: 'Doubles', fee: tournament.doubles_fee },
-                          { value: 'both'    as EventType, label: 'Both',    fee: (tournament.singles_fee ?? 0) + (tournament.doubles_fee ?? 0) },
-                        ] as const).map(({ value, label, fee }) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setEventType(value)}
-                            className={`px-3 py-2.5 rounded-xl border text-xs font-bold tracking-widest transition text-center ${
-                              eventType === value
-                                ? 'bg-[var(--sl-accent-10)] border-[var(--sl-accent)] text-[var(--sl-accent)]'
-                                : 'border-[var(--sl-border)] text-[var(--sl-accent)] hover:border-[var(--sl-text-20)] hover:text-[var(--sl-accent)]'
-                            }`}
-                          >
-                            <div>{label}</div>
-                            {fee != null && fee > 0 && <div className="font-bold mt-0.5">${fee}</div>}
-                          </button>
-                        ))}
+                {tournament.start_date && (
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.4)' }}>DATE</p>
+                    <p className="text-sm" style={{ color: '#444' }}>
+                      {formatDateShort(tournament.start_date)}
+                      {tournament.end_date && tournament.end_date !== tournament.start_date
+                        ? ` — ${formatDateShort(tournament.end_date)}`
+                        : ''}
+                    </p>
+                  </div>
+                )}
+
+                {tournament.daily_start_time && tournament.daily_end_time && (
+                  <div>
+                    <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.4)' }}>MATCH TIMES</p>
+                    <p className="text-sm" style={{ color: '#444' }}>
+                      {formatTime(tournament.daily_start_time)} — {formatTime(tournament.daily_end_time)}
+                    </p>
+                  </div>
+                )}
+
+                {mapsUrl && (
+                  <a href={mapsUrl} target="_blank" rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 text-[10px] font-bold tracking-[0.14em] uppercase px-4 py-2 rounded-lg transition hover:opacity-80"
+                    style={{ color: '#C0392B', border: '1.5px solid rgba(192,57,43,0.4)' }}>
+                    GET DIRECTIONS ↗
+                  </a>
+                )}
+              </div>
+
+              {/* RIGHT — Registration form or success */}
+              <div className="flex flex-col gap-4">
+
+                {/* Confirm / Submitting */}
+                {(state === 'confirm' || state === 'submitting') && (
+                  <>
+                    {/* Player details + rating */}
+                    <div className="rounded-2xl p-4" style={CARD_STYLE}>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-2 mb-4">
+                        <span className="text-xs" style={{ color: '#888' }}>Name</span>
+                        <span className="font-semibold text-right text-xs" style={{ color: '#111' }}>{player.first_name} {player.last_name}</span>
+                        {player.club_name && <>
+                          <span className="text-xs" style={{ color: '#888' }}>Club</span>
+                          <span className="font-medium text-right text-xs truncate" style={{ color: '#111' }}>{player.club_name}</span>
+                        </>}
+                      </div>
+
+                      <div className="h-px mb-4" style={{ background: 'rgba(192,57,43,0.2)' }} />
+
+                      {/* Rating editor */}
+                      <div className="flex items-center gap-3">
+                        <div className="shrink-0">
+                          <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.4)' }}>RATING (USR)</p>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setRating(r => adjustRating(r, -RATING_STEP))}
+                              disabled={rating <= RATING_MIN}
+                              className="w-8 h-8 rounded-lg font-bold disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
+                              style={{ border: '1.5px solid rgba(192,57,43,0.4)', color: '#C0392B' }}>−</button>
+                            <span className="text-2xl font-bold tracking-tight w-16 text-center tabular-nums" style={{ color: '#111' }}>
+                              {rating.toFixed(2)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setRating(r => adjustRating(r, +RATING_STEP))}
+                              disabled={rating >= RATING_MAX}
+                              className="w-8 h-8 rounded-lg font-bold disabled:opacity-25 disabled:cursor-not-allowed transition text-base flex items-center justify-center"
+                              style={{ border: '1.5px solid rgba(192,57,43,0.4)', color: '#C0392B' }}>+</button>
+                          </div>
+                          <p className="text-[10px] mt-1" style={{ color: '#888' }}>Verify Current Rating</p>
+                        </div>
+
+                        {/* Division badge */}
+                        <div className="flex-1 flex flex-col items-end gap-1">
+                          <span className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'rgba(0,0,0,0.4)' }}>DIVISION</span>
+                          <span className="text-3xl font-bold tracking-wider" style={{ color: '#C0392B' }}>{division}</span>
+                          {ratingChanged && (
+                            <span className="text-[10px] font-bold tracking-[0.14em] px-2 py-0.5 rounded"
+                              style={{ color: '#C0392B', background: 'rgba(192,57,43,0.08)', border: '1px solid rgba(192,57,43,0.2)' }}>
+                              profile will update
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-3" style={{ borderTop: '1px solid rgba(192,57,43,0.15)' }}>
+                        <Link
+                          href={`/profile?next=/tournament/${id}/register`}
+                          className="text-[10px] transition hover:underline"
+                          style={{ color: '#C0392B' }}>
+                          Wrong name or club? Update your profile →
+                        </Link>
                       </div>
                     </div>
-                  )}
 
-                  {/* Entry fee + payment buttons */}
-                  <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-4">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className="text-[var(--sl-accent)] text-sm">Entry Fee</span>
-                        <span className="text-[var(--sl-accent)] font-bold text-xl">
-                          {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
+                    {/* Event selection */}
+                    {hasBothEvents && (
+                      <div className="rounded-2xl p-4" style={CARD_STYLE}>
+                        <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-3" style={{ color: 'rgba(0,0,0,0.4)' }}>EVENT</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          {([
+                            { value: 'singles' as EventType, label: 'Singles', fee: tournament.singles_fee },
+                            { value: 'doubles' as EventType, label: 'Doubles', fee: tournament.doubles_fee },
+                            { value: 'both'    as EventType, label: 'Both',    fee: (tournament.singles_fee ?? 0) + (tournament.doubles_fee ?? 0) },
+                          ] as const).map(({ value, label, fee }) => (
+                            <button
+                              key={value}
+                              type="button"
+                              onClick={() => setEventType(value)}
+                              className="px-3 py-2.5 rounded-xl text-xs font-bold tracking-[0.14em] uppercase transition text-center"
+                              style={eventType === value
+                                ? { background: 'rgba(192,57,43,0.1)', border: '1.5px solid #C0392B', color: '#C0392B' }
+                                : { border: '1.5px solid rgba(192,57,43,0.3)', color: '#666' }}>
+                              <div>{label}</div>
+                              {fee != null && fee > 0 && <div className="font-bold mt-0.5">${fee}</div>}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Entry fee + payment buttons */}
+                    <div className="rounded-2xl p-4" style={CARD_STYLE}>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-3">
+                          <span className="text-sm" style={{ color: '#666' }}>Entry Fee</span>
+                          <span className="font-bold text-xl" style={{ color: '#C0392B' }}>
+                            {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
+                          </span>
+                        </div>
+                        <span className="text-xs" style={{ color: '#888' }}>
+                          {division} Grade · {rating.toFixed(2)} USR
                         </span>
                       </div>
-                      <span className="text-[var(--sl-accent)] text-xs">
-                        {division} Grade · {rating.toFixed(2)} USR
-                      </span>
+
+                      {error && <p className="text-red-500 text-sm mb-3">{error}</p>}
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => handleSubmit('deposit_paid')}
+                          disabled={state === 'submitting'}
+                          className="py-3.5 rounded-xl font-bold tracking-[0.14em] uppercase text-xs transition disabled:opacity-50"
+                          style={{ border: '2px solid #C0392B', color: '#C0392B' }}>
+                          {state === 'submitting' ? '…' : 'PAY DEPOSIT'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSubmit('fully_paid')}
+                          disabled={state === 'submitting'}
+                          className="py-3.5 rounded-xl font-bold tracking-[0.14em] uppercase text-xs text-white transition hover:opacity-90 disabled:opacity-50"
+                          style={{ background: '#C0392B' }}>
+                          {state === 'submitting' ? '…' : 'PAY IN FULL'}
+                        </button>
+                      </div>
+                      <p className="text-[10px] text-center tracking-wide mt-1" style={{ color: '#888' }}>
+                        Payment processing coming soon
+                      </p>
+                    </div>
+                  </>
+                )}
+
+                {/* Success */}
+                {state === 'success' && (
+                  <>
+                    <div className="rounded-2xl p-6 text-center" style={{ ...CARD_STYLE, border: '1.5px solid rgba(192,57,43,0.3)' }}>
+                      <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto mb-4"
+                        style={{ background: 'rgba(192,57,43,0.1)', border: '1.5px solid rgba(192,57,43,0.3)' }}>
+                        <span className="text-xl font-bold" style={{ color: '#C0392B' }}>✓</span>
+                      </div>
+                      <h2 className="text-base font-bold tracking-[0.14em] uppercase mb-3" style={{ color: '#111' }}>YOU&apos;RE ON THE LIST!</h2>
+                      <p className="text-sm leading-relaxed" style={{ color: '#666' }}>
+                        Payment processing coming soon —<br />
+                        we&apos;ll confirm your spot once payment is received.
+                      </p>
                     </div>
 
-                    {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+                    <div className="rounded-2xl p-5" style={CARD_STYLE}>
+                      <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-4" style={{ color: 'rgba(0,0,0,0.4)' }}>REGISTRATION DETAILS</p>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+                        <span className="text-xs" style={{ color: '#888' }}>Name</span>
+                        <span className="font-semibold text-right text-xs" style={{ color: '#111' }}>{player.first_name} {player.last_name}</span>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => handleSubmit('deposit_paid')}
-                        disabled={state === 'submitting'}
-                        className="py-3.5 rounded-xl border-2 border-[var(--sl-accent)] text-[var(--sl-accent)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-10)] transition disabled:opacity-50"
-                      >
-                        {state === 'submitting' ? '...' : 'PAY DEPOSIT'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSubmit('fully_paid')}
-                        disabled={state === 'submitting'}
-                        className="py-3.5 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-xs hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50"
-                      >
-                        {state === 'submitting' ? '...' : 'PAY IN FULL'}
-                      </button>
+                        <span className="text-xs" style={{ color: '#888' }}>Tournament</span>
+                        <span className="font-semibold text-right text-xs leading-snug" style={{ color: '#111' }}>{tournament.name}</span>
+
+                        <span className="text-xs" style={{ color: '#888' }}>Division</span>
+                        <span className="font-bold text-right text-xs" style={{ color: '#C0392B' }}>{ratingToDivision(rating)} ({rating.toFixed(2)} USR)</span>
+
+                        <span className="text-xs" style={{ color: '#888' }}>Entry Fee</span>
+                        <span className="font-bold text-right text-xs" style={{ color: '#C0392B' }}>
+                          {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
+                        </span>
+
+                        <span className="text-xs" style={{ color: '#888' }}>Payment</span>
+                        <span className={`font-bold text-right text-xs ${chosenPayment === 'fully_paid' ? 'text-green-600' : 'text-yellow-600'}`}>
+                          {chosenPayment === 'fully_paid' ? 'Pay in Full' : 'Deposit'}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-[var(--sl-accent)] text-[10px] text-center tracking-wide mt-1">
-                      Payment processing coming soon
-                    </p>
-                  </div>
-                </>
-              )}
 
-              {/* ── Success ── */}
-              {state === 'success' && (
-                <>
-                  <div className="bg-[var(--sl-surface)] border border-[var(--sl-accent-30)] rounded-2xl p-6 text-center">
-                    <div className="w-12 h-12 rounded-full bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] flex items-center justify-center mx-auto mb-4">
-                      <span className="text-[var(--sl-accent)] text-xl font-bold">✓</span>
-                    </div>
-                    <h2 className="text-base font-bold tracking-widest text-[var(--sl-accent)] mb-3">YOU&apos;RE ON THE LIST!</h2>
-                    <p className="text-[var(--sl-accent)] text-sm leading-relaxed">
-                      Payment processing coming soon —<br />
-                      we&apos;ll confirm your spot once payment is received.
-                    </p>
-                  </div>
+                    <button
+                      type="button"
+                      onClick={() => router.push('/dashboard')}
+                      className="w-full py-4 rounded-xl text-sm font-bold tracking-[0.14em] uppercase text-white transition hover:opacity-90"
+                      style={{ background: '#C0392B' }}>
+                      GO TO MY DASHBOARD
+                    </button>
+                  </>
+                )}
 
-                  <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5">
-                    <p className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mb-4">REGISTRATION DETAILS</p>
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-                      <span className="text-[var(--sl-accent)] text-xs">Name</span>
-                      <span className="font-semibold text-right text-xs">{player.first_name} {player.last_name}</span>
-
-                      <span className="text-[var(--sl-accent)] text-xs">Tournament</span>
-                      <span className="font-semibold text-right text-xs leading-snug">{tournament.name}</span>
-
-                      <span className="text-[var(--sl-accent)] text-xs">Division</span>
-                      <span className="font-bold text-right text-xs text-[var(--sl-accent)]">{ratingToDivision(rating)} ({rating.toFixed(2)} USR)</span>
-
-                      <span className="text-[var(--sl-accent)] text-xs">Entry Fee</span>
-                      <span className="font-bold text-right text-xs text-[var(--sl-accent)]">
-                        {entryFee != null && entryFee > 0 ? `$${entryFee}` : 'Free'}
-                      </span>
-
-                      <span className="text-[var(--sl-accent)] text-xs">Payment</span>
-                      <span className={`font-bold text-right text-xs ${chosenPayment === 'fully_paid' ? 'text-green-400' : 'text-yellow-400'}`}>
-                        {chosenPayment === 'fully_paid' ? 'Pay in Full' : 'Deposit'}
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => router.push('/dashboard')}
-                    className="w-full py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition"
-                  >
-                    GO TO MY DASHBOARD
-                  </button>
-                </>
-              )}
-
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
+        </div>
       </div>
-    </main>
+
+      {/* RIGHT SIDEBAR */}
+      <div className="w-[70px] flex-shrink-0 relative" style={SIDEBAR_STYLE}>
+        <div className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }} />
+      </div>
+
+    </div>
   )
 }

@@ -4,10 +4,6 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import ThemeToggle from '@/app/components/ThemeToggle'
-import SiteLogo from '@/app/components/SiteLogo'
-
-const kDevPlayerId = '00000000-0000-0000-0000-000000000002'
 
 type Match = {
   id: string
@@ -31,9 +27,9 @@ type Registration = {
 }
 
 const PAYMENT_MSG: Record<string, { label: string; sub: string; color: string }> = {
-  fully_paid:   { label: 'Registered ✓', sub: 'Fully paid',                             color: 'text-green-400' },
-  deposit_paid: { label: 'Deposit Received', sub: 'Spot guaranteed, balance due at door', color: 'text-yellow-400' },
-  waitlist:     { label: 'Deposit Required', sub: 'You are on the waitlist',              color: 'text-[var(--sl-text-40)]' },
+  fully_paid:   { label: 'Registered ✓', sub: 'Fully paid',                              color: '#16a34a' },
+  deposit_paid: { label: 'Deposit Received', sub: 'Spot guaranteed, balance due at door', color: '#ca8a04' },
+  waitlist:     { label: 'Deposit Required', sub: 'You are on the waitlist',              color: '#888' },
 }
 
 type Player = {
@@ -42,10 +38,15 @@ type Player = {
   usr_rating: string | null
 }
 
+const SIDEBAR_STYLE = {
+  background: 'linear-gradient(to bottom, #1a0a0a, #2a1010, #111)',
+  borderTop: '4px solid #C0392B',
+  borderBottom: '4px solid #C0392B',
+}
+
 export default function DashboardPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
-  const [isDevMode, setIsDevMode] = useState(false)
   const [player, setPlayer] = useState<Player | null>(null)
   const [authName, setAuthName] = useState<string | null>(null)
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
@@ -85,21 +86,8 @@ export default function DashboardPage() {
     }
 
     async function init() {
-      const devMode = localStorage.getItem('devMode') === 'true'
-
-      if (devMode) {
-        setIsDevMode(true)
-        await fetchData(kDevPlayerId)
-        setLoading(false)
-        return
-      }
-
       const { data: { user } } = await supabase.auth.getUser()
-      if (!user) {
-        router.replace('/login')
-        return
-      }
-
+      if (!user) { router.replace('/login'); return }
       setAuthName(user.user_metadata?.full_name ?? user.email ?? null)
       await fetchData(user.id)
       setLoading(false)
@@ -109,169 +97,237 @@ export default function DashboardPage() {
   }, [router])
 
   const handleSignOut = async () => {
-    if (isDevMode) {
-      localStorage.removeItem('devMode')
-      router.push('/login')
-      return
-    }
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push('/login')
   }
 
   const displayName = player
-    ? `${player.first_name} ${player.last_name}`
-    : (authName ?? 'Player')
+    ? player.first_name
+    : (authName?.split(' ')[0] ?? 'Player')
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
-      </main>
+      <div className="flex h-screen overflow-hidden">
+        <div className="w-[70px] flex-shrink-0" style={SIDEBAR_STYLE} />
+        <div
+          className="flex-1 flex items-center justify-center"
+          style={{ backgroundImage: "url('/COURTNFLOOR.png')", backgroundSize: 'cover', backgroundPosition: 'center', backgroundColor: '#1a0a0a' }}
+        >
+          <div className="w-8 h-8 border-2 border-[#C0392B] border-t-transparent rounded-full animate-spin" />
+        </div>
+        <div className="w-[70px] flex-shrink-0" style={SIDEBAR_STYLE} />
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
-      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/">
-          <SiteLogo />
-        </Link>
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
+    <div className="flex h-screen overflow-hidden">
+
+      {/* LEFT SIDEBAR */}
+      <div className="w-[70px] flex-shrink-0 relative" style={SIDEBAR_STYLE}>
+        <div
+          className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }}
+        />
+      </div>
+
+      {/* MAIN — scrollable */}
+      <div
+        className="flex-1 overflow-y-auto"
+        style={{
+          backgroundImage: "url('/COURTNFLOOR.png')",
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 70%',
+          backgroundAttachment: 'fixed',
+          backgroundColor: '#1a0a0a',
+        }}
+      >
+        {/* ── HEADER ── */}
+        <div
+          className="flex items-center justify-between px-8 py-4"
+          style={{ borderBottom: '1px solid rgba(192,57,43,0.25)', backdropFilter: 'blur(12px)' }}
+        >
+          <Link href="/" className="flex flex-col items-start">
+            <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" className="h-12 w-auto" />
+            <p className="text-sm font-bold tracking-[0.22em] uppercase mt-0.5" style={{ color: '#222' }}>
+              Player Dashboard
+            </p>
+          </Link>
           <button
             onClick={handleSignOut}
-            className="text-xs font-semibold tracking-widest text-[var(--sl-text-30)] hover:text-[var(--sl-text-60)] transition"
+            className="text-[10px] font-bold tracking-[0.14em] transition hover:opacity-60"
+            style={{ color: '#C0392B' }}
           >
             SIGN OUT
           </button>
         </div>
-      </header>
 
-      <section className="px-6 py-10 max-w-3xl mx-auto">
-        <div className="mb-10">
-          <div className="flex items-center gap-3 mb-1">
-            <p className="text-[var(--sl-text-30)] text-xs tracking-widest uppercase">Welcome back</p>
-            {isDevMode && (
-              <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded border border-dashed border-[var(--sl-text-20)] text-[var(--sl-text-20)]">
-                DEV MODE
-              </span>
+        {/* ── CONTENT ── */}
+        <div className="max-w-2xl mx-auto px-8 py-8">
+
+          {/* Welcome */}
+          <div
+            className="rounded-2xl px-6 py-5 mb-5"
+            style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}
+          >
+            <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.45)' }}>
+              Welcome back
+            </p>
+            <h1 className="text-2xl font-bold tracking-[0.14em]" style={{ color: '#111' }}>
+              {displayName.toUpperCase()}
+            </h1>
+            {player?.usr_rating && (
+              <p className="text-sm mt-1 tracking-[0.14em] font-bold" style={{ color: '#C0392B' }}>
+                USR {player.usr_rating}
+              </p>
             )}
           </div>
-          <h1 className="text-3xl font-bold tracking-wider text-[var(--sl-text)]">{displayName.toUpperCase()}</h1>
-          {player?.usr_rating && (
-            <p className="text-[var(--sl-accent)] text-sm mt-1 tracking-widest">USR {player.usr_rating}</p>
-          )}
-        </div>
 
-        {/* Complete profile banner — shown for Google users with no squash profile */}
-        {!player && !isDevMode && (
-          <div className="mb-8 bg-[var(--sl-accent-05)] border border-[var(--sl-accent-20)] rounded-2xl p-5 flex items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold tracking-widest text-[var(--sl-accent)] mb-1">COMPLETE YOUR PROFILE</p>
-              <p className="text-[var(--sl-text-50)] text-sm">Add your Club Locker rating and squash details so tournament registration is instant.</p>
-            </div>
-            <Link
-              href="/profile"
-              className="shrink-0 text-xs font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] px-4 py-2.5 rounded-xl hover:bg-[var(--sl-accent-hover)] transition"
+          {/* Complete profile banner */}
+          {!player && (
+            <div
+              className="mb-5 rounded-2xl p-5 flex items-start justify-between gap-4"
+              style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.4)' }}
             >
-              SET UP →
-            </Link>
-          </div>
-        )}
-
-        {/* Upcoming matches */}
-        <div className="mb-10">
-          <h2 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-4">Upcoming Matches</h2>
-          {upcomingMatches.length === 0 ? (
-            <p className="text-[var(--sl-text-20)] text-sm">No scheduled matches.</p>
-          ) : (
-            <div className="grid gap-3">
-              {upcomingMatches.map((m) => (
-                <div key={m.id} className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">
-                      {m.division ?? 'OPEN'} — RD {m.round ?? '?'}
-                    </span>
-                    {m.court && (
-                      <span className="text-[10px] tracking-widest text-[var(--sl-text-30)]">Court {m.court}</span>
-                    )}
-                  </div>
-                  <p className="text-[var(--sl-text-80)] text-sm">
-                    {m.tournaments?.name ?? 'Tournament'}
-                  </p>
-                  {m.scheduled_time && (
-                    <p className="text-[var(--sl-text-40)] text-xs mt-1">
-                      {new Date(m.scheduled_time).toLocaleString('en-AU', {
-                        weekday: 'short',
-                        day: 'numeric',
-                        month: 'short',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Registrations */}
-        <div className="mb-10">
-          <h2 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-4">My Tournaments</h2>
-          {registrations.length === 0 ? (
-            <div className="text-center py-10">
-              <p className="text-[var(--sl-text-20)] text-sm mb-4">You haven&apos;t entered any tournaments yet.</p>
+              <div>
+                <p className="text-sm font-bold tracking-[0.14em] mb-1" style={{ color: '#C0392B' }}>
+                  COMPLETE YOUR PROFILE
+                </p>
+                <p className="text-sm" style={{ color: '#444' }}>
+                  Add your Club Locker rating and squash details so tournament registration is instant.
+                </p>
+              </div>
               <Link
-                href="/"
-                className="inline-block text-sm font-bold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-6 py-3 rounded-xl hover:bg-[var(--sl-accent-10)] transition"
+                href="/profile"
+                className="shrink-0 text-xs font-bold tracking-[0.14em] text-white px-4 py-2.5 rounded-xl transition hover:opacity-90"
+                style={{ background: '#C0392B' }}
               >
-                BROWSE TOURNAMENTS
+                SET UP →
               </Link>
             </div>
-          ) : (
-            <div className="grid gap-3">
-              {registrations.map((r) => (
-                <Link
-                  key={r.id}
-                  href={`/tournament/${r.tournaments?.id}`}
-                  className="block bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5 hover:border-[var(--sl-accent-30)] transition"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-sm tracking-wide text-[var(--sl-text)]">{r.tournaments?.name}</p>
-                      {r.division && (
-                        <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] mt-1 inline-block">
-                          {r.division}
+          )}
+
+          {/* Upcoming Matches */}
+          <div className="mb-5">
+            <h2 className="text-[10px] font-bold tracking-[0.14em] uppercase mb-3" style={{ color: '#222' }}>
+              Upcoming Matches
+            </h2>
+            {upcomingMatches.length === 0 ? (
+              <div
+                className="rounded-2xl px-6 py-4"
+                style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}
+              >
+                <p className="text-sm" style={{ color: '#666' }}>No scheduled matches.</p>
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {upcomingMatches.map((m) => (
+                  <div
+                    key={m.id}
+                    className="rounded-2xl p-5"
+                    style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-bold tracking-[0.14em]" style={{ color: '#C0392B' }}>
+                        {m.division ?? 'OPEN'} — RD {m.round ?? '?'}
+                      </span>
+                      {m.court && (
+                        <span className="text-[10px] tracking-[0.14em]" style={{ color: '#888' }}>
+                          Court {m.court}
                         </span>
                       )}
                     </div>
-                    {(() => {
-                      const pm = PAYMENT_MSG[r.payment_status] ?? { label: r.payment_status.toUpperCase(), sub: '', color: 'text-[var(--sl-text-40)]' }
-                      return (
-                        <div className="text-right shrink-0">
-                          <p className={`text-[10px] font-bold tracking-widest ${pm.color}`}>{pm.label}</p>
-                          {pm.sub && <p className="text-[9px] text-[var(--sl-text-30)] mt-0.5 leading-snug max-w-[140px] text-right">{pm.sub}</p>}
-                        </div>
-                      )
-                    })()}
+                    <p className="text-sm font-semibold" style={{ color: '#111' }}>{m.tournaments?.name ?? 'Tournament'}</p>
+                    {m.scheduled_time && (
+                      <p className="text-xs mt-1" style={{ color: '#666' }}>
+                        {new Date(m.scheduled_time).toLocaleString('en-AU', {
+                          weekday: 'short', day: 'numeric', month: 'short',
+                          hour: '2-digit', minute: '2-digit',
+                        })}
+                      </p>
+                    )}
                   </div>
-                  {r.tournaments?.start_date && (
-                    <p className="text-[var(--sl-text-30)] text-xs mt-2">
-                      {new Date(r.tournaments.start_date).toLocaleDateString('en-AU', {
-                        day: 'numeric',
-                        month: 'long',
-                        year: 'numeric',
-                      })}
-                    </p>
-                  )}
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* My Tournaments */}
+          <div className="mb-8">
+            <h2 className="text-[10px] font-bold tracking-[0.14em] uppercase mb-3" style={{ color: '#222' }}>
+              My Tournaments
+            </h2>
+            {registrations.length === 0 ? (
+              <div
+                className="rounded-2xl px-6 py-8 text-center"
+                style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}
+              >
+                <p className="text-sm mb-4" style={{ color: '#666' }}>
+                  You haven&apos;t entered any tournaments yet.
+                </p>
+                <Link
+                  href="/"
+                  className="inline-block text-sm font-bold tracking-[0.14em] text-white px-6 py-3 rounded-xl transition hover:opacity-90"
+                  style={{ background: '#C0392B' }}
+                >
+                  BROWSE TOURNAMENTS
                 </Link>
-              ))}
-            </div>
-          )}
+              </div>
+            ) : (
+              <div className="grid gap-3">
+                {registrations.map((r) => {
+                  const pm = PAYMENT_MSG[r.payment_status] ?? { label: r.payment_status.toUpperCase(), sub: '', color: '#888' }
+                  return (
+                    <Link
+                      key={r.id}
+                      href={`/tournament/${r.tournaments?.id}`}
+                      className="block rounded-2xl p-5 transition hover:opacity-80"
+                      style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="font-semibold text-sm tracking-[0.14em]" style={{ color: '#111' }}>{r.tournaments?.name}</p>
+                          {r.division && (
+                            <span className="text-[10px] font-bold tracking-[0.14em] mt-1 inline-block" style={{ color: '#C0392B' }}>
+                              {r.division}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-[10px] font-bold tracking-[0.14em]" style={{ color: pm.color }}>{pm.label}</p>
+                          {pm.sub && (
+                            <p className="text-[9px] mt-0.5 leading-snug max-w-[140px] text-right" style={{ color: '#888' }}>
+                              {pm.sub}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {r.tournaments?.start_date && (
+                        <p className="text-xs mt-2" style={{ color: '#666' }}>
+                          {new Date(r.tournaments.start_date).toLocaleDateString('en-AU', {
+                            day: 'numeric', month: 'long', year: 'numeric',
+                          })}
+                        </p>
+                      )}
+                    </Link>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
-      </section>
-    </main>
+      </div>
+
+      {/* RIGHT SIDEBAR */}
+      <div className="w-[70px] flex-shrink-0 relative" style={SIDEBAR_STYLE}>
+        <div
+          className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }}
+        />
+      </div>
+
+    </div>
   )
 }

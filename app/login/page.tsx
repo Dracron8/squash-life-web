@@ -3,8 +3,6 @@
 import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import ThemeToggle from '@/app/components/ThemeToggle'
-import SiteLogo from '@/app/components/SiteLogo'
 import SignupModal from '@/app/components/SignupModal'
 
 export default function LoginPage() {
@@ -13,8 +11,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
-  const [isLocalhost, setIsLocalhost] = useState(false)
-  const [showSignup, setShowSignup] = useState(false)
+const [showSignup, setShowSignup] = useState(false)
   const [showForgot, setShowForgot] = useState(false)
   const [forgotEmail, setForgotEmail] = useState('')
   const [forgotLoading, setForgotLoading] = useState(false)
@@ -22,18 +19,13 @@ export default function LoginPage() {
   const supabase = createClient()
   const router = useRouter()
 
-  useEffect(() => {
-    setIsLocalhost(window.location.hostname === 'localhost')
-  }, [])
-
-  const handleGoogleLogin = async () => {
+const handleGoogleLogin = async () => {
     setGoogleLoading(true)
     setError(null)
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback` },
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
     })
-    // signInWithOAuth navigates away on success — only reaches here on failure
     if (error) {
       setError(error.message)
       setGoogleLoading(false)
@@ -60,7 +52,7 @@ export default function LoginPage() {
     e.preventDefault()
     setForgotLoading(true)
     setError(null)
-    const redirectTo = `${process.env.NEXT_PUBLIC_SITE_URL || window.location.origin}/auth/callback?next=/reset-password`
+    const redirectTo = `${window.location.origin}/auth/callback?next=/reset-password`
     const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, { redirectTo })
     setForgotLoading(false)
     if (error) {
@@ -70,189 +62,241 @@ export default function LoginPage() {
     }
   }
 
-  const handleDevBypass = () => {
-    setEmailLoading(true)
-    localStorage.setItem('devMode', 'true')
-    router.push('/dashboard')
-  }
-
-  const inputCls = 'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
-
-  return (
+return (
     <>
-    <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center px-6 py-12">
-      {/* Theme toggle pinned top-right */}
-      <div className="fixed top-4 right-4">
-        <ThemeToggle />
-      </div>
+      {/* ── FULL SCREEN LAYOUT ── */}
+      <div className="flex min-h-screen overflow-hidden">
 
-      <div className="w-full max-w-sm">
-        <div className="text-center mb-10">
-          <div className="flex justify-center mb-2">
-            <SiteLogo size="hero" />
-          </div>
-          <p className="text-[var(--sl-text-30)] text-sm tracking-widest">PLAYER PORTAL</p>
+        {/* LEFT SIDEBAR */}
+        <div
+          className="w-[70px] flex-shrink-0 relative flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(to bottom, #1a0a0a, #2a1010, #111)',
+            borderTop: '4px solid #C0392B',
+            borderBottom: '4px solid #C0392B',
+          }}
+        >
+          <div
+            className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+            style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }}
+          />
         </div>
 
-        <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-8 space-y-6">
+        {/* MAIN AREA — court background */}
+        <div
+          className="flex-1 relative flex items-center justify-center"
+          style={{
+            backgroundImage: "url('/COURTNFLOOR.png')",
+            backgroundSize: 'cover',
+            backgroundPosition: 'center 70%',
+            backgroundColor: '#1a0a0a',
+          }}
+        >
+          <div className="relative z-10 flex flex-col items-center w-full max-w-[340px] px-4">
 
-          {/* ── Google ── */}
-          <div>
-            <button
-              onClick={handleGoogleLogin}
-              disabled={googleLoading || emailLoading}
-              className="w-full flex items-center justify-center gap-3 bg-white text-gray-900 font-semibold py-3 px-6 rounded-xl border border-gray-200 hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            {/* Logo + subtitle */}
+            <img
+              src="/sqshLIFE-logo.png"
+              alt="SQSH.LIFE"
+              className="w-[260px] h-auto mb-1"
+            />
+            <p
+              className="text-sm font-bold tracking-[0.22em] uppercase mb-3"
+              style={{ color: '#222' }}
             >
-              <svg className="w-5 h-5 shrink-0" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-              </svg>
-              {googleLoading ? 'Redirecting…' : 'Continue with Google'}
-            </button>
-          </div>
+              Player Portal
+            </p>
 
-          {/* ── Divider ── */}
-          <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-[var(--sl-border)]" />
-            <span className="text-[var(--sl-text-20)] text-xs tracking-widest">OR</span>
-            <div className="flex-1 h-px bg-[var(--sl-border)]" />
-          </div>
-
-          {/* ── Email / Password ── */}
-          {!showForgot ? (
-          <form onSubmit={handleSignIn} className="space-y-3">
-            <div>
-              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">
-                EMAIL
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
-                autoComplete="off"
-                required
-                className={inputCls}
-              />
-            </div>
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">
-                  PASSWORD
-                </label>
-                <button
-                  type="button"
-                  onClick={() => { setShowForgot(true); setForgotEmail(email); setError(null) }}
-                  className="text-[10px] text-[var(--sl-text-30)] hover:text-[var(--sl-accent)] tracking-widest transition"
-                >
-                  FORGOT?
-                </button>
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete="off"
-                required
-                className={inputCls}
-              />
-            </div>
-
-            {error && (
-              <p className="text-red-400 text-xs mt-1">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              disabled={emailLoading || googleLoading}
-              className="w-full py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+            {/* Card */}
+            <div
+              className="w-full rounded-2xl px-6 py-4"
+              style={{ backdropFilter: 'blur(12px)' }}
             >
-              {emailLoading ? 'SIGNING IN…' : 'SIGN IN'}
-            </button>
 
-            <button
-              type="button"
-              onClick={() => setShowSignup(true)}
-              disabled={emailLoading || googleLoading}
-              className="w-full py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] font-semibold text-xs tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition disabled:opacity-50"
-            >
-              CREATE ACCOUNT
-            </button>
-          </form>
-          ) : (
-          <div className="space-y-3">
-            {forgotSent ? (
-              <div className="text-center space-y-3">
-                <p className="text-[var(--sl-text)] text-sm">Check your inbox!</p>
-                <p className="text-[var(--sl-text-30)] text-xs">A password reset link was sent to <span className="text-[var(--sl-text)]">{forgotEmail}</span>.</p>
-                <button
-                  type="button"
-                  onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail('') }}
-                  className="w-full py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] font-semibold text-xs tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition"
-                >
-                  BACK TO SIGN IN
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleForgotPassword} className="space-y-3">
-                <div>
-                  <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1">
-                    ENTER YOUR EMAIL
-                  </label>
-                  <input
-                    type="email"
-                    value={forgotEmail}
-                    onChange={(e) => setForgotEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    autoComplete="off"
-                    required
-                    className={inputCls}
-                  />
-                </div>
-                {error && <p className="text-red-400 text-xs">{error}</p>}
-                <button
-                  type="submit"
-                  disabled={forgotLoading}
-                  className="w-full py-3 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {forgotLoading ? 'SENDING…' : 'SEND RESET LINK'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setShowForgot(false); setError(null) }}
-                  className="w-full py-2.5 rounded-xl border border-[var(--sl-border)] text-[var(--sl-text-40)] font-semibold text-xs tracking-widest hover:border-[var(--sl-text-20)] hover:text-[var(--sl-text-60)] transition"
-                >
-                  BACK TO SIGN IN
-                </button>
-              </form>
-            )}
-          </div>
-          )}
-
-          {/* ── Dev Bypass (localhost only) ── */}
-          {isLocalhost && (
-            <>
-              <div className="flex items-center gap-3">
-                <div className="flex-1 h-px bg-[var(--sl-border-faint)]" />
-                <span className="text-[var(--sl-text-10)] text-[10px] tracking-widest">DEV</span>
-                <div className="flex-1 h-px bg-[var(--sl-border-faint)]" />
-              </div>
+              {/* Google */}
               <button
-                onClick={handleDevBypass}
-                className="w-full py-2 rounded-lg border border-dashed border-[var(--sl-border)] text-[var(--sl-text-20)] text-xs tracking-widest hover:text-[var(--sl-text-40)] hover:border-[var(--sl-text-20)] transition"
+                onClick={handleGoogleLogin}
+                disabled={googleLoading || emailLoading}
+                className="w-full flex items-center justify-center gap-2.5 bg-white rounded-lg py-[11px] px-4 text-sm font-semibold text-[#222] transition hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{ border: '1.5px solid #C0392B' }}
               >
-                Enter as Dev Player
+                <svg width="18" height="18" viewBox="0 0 48 48">
+                  <path fill="#4285F4" d="M44.5 20H24v8.5h11.8C34.7 33.9 29.8 37 24 37c-7.2 0-13-5.8-13-13s5.8-13 13-13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21c10.5 0 20-7.6 20-21 0-1.4-.1-2.7-.5-4z"/>
+                  <path fill="#34A853" d="M6.3 14.7l7 5.1C15 16.1 19.2 13 24 13c3.1 0 5.9 1.1 8.1 2.9l6.4-6.4C34.6 5.1 29.6 3 24 3c-7.6 0-14.3 4.6-17.7 11.7z"/>
+                  <path fill="#FBBC05" d="M24 45c5.8 0 10.7-1.9 14.3-5.1l-6.6-5.4C29.8 36.1 27 37 24 37c-5.7 0-10.6-3.1-11.7-7.5l-7 5.4C8 40.5 15.5 45 24 45z"/>
+                  <path fill="#EA4335" d="M44.5 20H24v8.5h11.8c-.5 2.7-2 5-4.2 6.5l6.6 5.4C41.7 37.3 45 31 45 24c0-1.4-.1-2.7-.5-4z"/>
+                </svg>
+                {googleLoading ? 'Redirecting…' : 'Continue with Google'}
               </button>
-            </>
-          )}
-        </div>
-      </div>
-    </main>
 
-    {showSignup && <SignupModal onClose={() => setShowSignup(false)} />}
+              {/* OR divider */}
+              <div className="flex items-center gap-2.5 my-3">
+                <div className="flex-1 h-px" style={{ background: '#C0392B' }} />
+                <span className="text-xs" style={{ color: '#C0392B' }}>OR</span>
+                <div className="flex-1 h-px" style={{ background: '#C0392B' }} />
+              </div>
+
+              {/* Email / Password / Forgot */}
+              {!showForgot ? (
+                <form onSubmit={handleSignIn} className="space-y-2.5">
+                  <div>
+                    <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px] text-[#222]">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      autoComplete="email"
+                      required
+                      className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                      style={{
+                        border: '1.5px solid #C0392B',
+                        background: 'rgba(255,255,255,0.12)',
+                        color: '#C0392B',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-[5px]">
+                      <label className="text-[10px] font-bold tracking-[0.14em] uppercase text-[#222]">
+                        Password
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => { setShowForgot(true); setForgotEmail(email); setError(null) }}
+                        className="text-[10px] tracking-[0.05em] transition hover:underline"
+                        style={{ color: '#C0392B' }}
+                      >
+                        FORGOT?
+                      </button>
+                    </div>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                      className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                      style={{
+                        border: '1.5px solid #C0392B',
+                        background: 'rgba(255,255,255,0.12)',
+                        color: '#C0392B',
+                      }}
+                    />
+                  </div>
+
+                  {error && <p className="text-red-400 text-xs">{error}</p>}
+
+                  <button
+                    type="submit"
+                    disabled={emailLoading || googleLoading}
+                    className="w-full py-3 rounded-lg text-sm font-bold tracking-[0.1em] uppercase text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed mt-1"
+                    style={{ background: '#C0392B' }}
+                  >
+                    {emailLoading ? 'SIGNING IN…' : 'SIGN IN'}
+                  </button>
+
+                  <div className="h-px mt-[18px] mb-3.5" style={{ background: 'rgba(192,57,43,0.3)' }} />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowSignup(true)}
+                    disabled={emailLoading || googleLoading}
+                    className="w-full text-center text-xs transition hover:underline disabled:opacity-50"
+                    style={{ color: '#C0392B' }}
+                  >
+                    New here? Create your account →
+                  </button>
+                </form>
+              ) : (
+                <div className="space-y-2.5">
+                  {forgotSent ? (
+                    <div className="text-center space-y-3">
+                      <p className="text-sm" style={{ color: '#C0392B' }}>Check your inbox!</p>
+                      <p className="text-xs" style={{ color: 'rgba(192,57,43,0.7)' }}>
+                        A reset link was sent to <span style={{ color: '#C0392B' }}>{forgotEmail}</span>.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => { setShowForgot(false); setForgotSent(false); setForgotEmail('') }}
+                        className="w-full py-2.5 rounded-lg text-xs font-semibold tracking-widest transition hover:opacity-80"
+                        style={{ border: '1.5px solid #C0392B', color: '#C0392B' }}
+                      >
+                        BACK TO SIGN IN
+                      </button>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleForgotPassword} className="space-y-2.5">
+                      <div>
+                        <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px] text-[#222]">
+                          Enter your email
+                        </label>
+                        <input
+                          type="email"
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                          autoComplete="email"
+                          required
+                          className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                          style={{
+                            border: '1.5px solid #C0392B',
+                            background: 'rgba(255,255,255,0.12)',
+                            color: '#C0392B',
+                          }}
+                        />
+                      </div>
+                      {error && <p className="text-red-400 text-xs">{error}</p>}
+                      <button
+                        type="submit"
+                        disabled={forgotLoading}
+                        className="w-full py-3 rounded-lg text-sm font-bold tracking-[0.1em] uppercase text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                        style={{ background: '#C0392B' }}
+                      >
+                        {forgotLoading ? 'SENDING…' : 'SEND RESET LINK'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowForgot(false); setError(null) }}
+                        className="w-full py-2.5 rounded-lg text-xs font-semibold tracking-widest transition hover:opacity-80"
+                        style={{ border: '1.5px solid #C0392B', color: '#C0392B' }}
+                      >
+                        BACK TO SIGN IN
+                      </button>
+                    </form>
+                  )}
+                </div>
+              )}
+
+
+            </div>
+
+            {/* Footer */}
+            <p className="mt-3 text-[10px] tracking-[0.1em]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              © 2026 SQSH.LIFE
+            </p>
+
+          </div>
+        </div>
+
+        {/* RIGHT SIDEBAR */}
+        <div
+          className="w-[70px] flex-shrink-0 relative flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(to bottom, #1a0a0a, #2a1010, #111)',
+            borderTop: '4px solid #C0392B',
+            borderBottom: '4px solid #C0392B',
+          }}
+        >
+          <div
+            className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+            style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }}
+          />
+        </div>
+
+      </div>
+
+      {showSignup && <SignupModal onClose={() => setShowSignup(false)} />}
     </>
   )
 }

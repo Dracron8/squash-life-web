@@ -5,8 +5,6 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import Fuse from 'fuse.js'
-import ThemeToggle from '@/app/components/ThemeToggle'
-import SiteLogo from '@/app/components/SiteLogo'
 import CLUBS_RAW from '../../squash_clubs.json'
 
 interface Club { name: string; city: string; region: string; country: string }
@@ -20,8 +18,23 @@ function ratingToDivision(r: number): string {
   return 'D'
 }
 
-const inputCls = 'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent-40)] transition'
-const labelCls = 'block text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-1'
+const SIDEBAR_STYLE = {
+  background: 'linear-gradient(to bottom, #1a0a0a, #2a1010, #111)',
+  borderTop: '4px solid #C0392B',
+  borderBottom: '4px solid #C0392B',
+}
+
+const CARD_STYLE = {
+  background: 'rgba(255,255,255,0.18)',
+  backdropFilter: 'blur(12px)',
+  border: '1.5px solid rgba(192,57,43,0.3)',
+}
+
+const inputStyle = {
+  border: '1.5px solid rgba(192,57,43,0.4)',
+  background: 'rgba(255,255,255,0.12)',
+  color: '#111',
+}
 
 export default function ProfilePage() {
   const router = useRouter()
@@ -70,14 +83,12 @@ export default function ProfilePage() {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) { router.replace('/login'); return }
 
-      // Pre-fill from Google metadata if available
       const meta = user.user_metadata ?? {}
       if (meta.given_name) setFirstName(meta.given_name)
       else if (meta.full_name) setFirstName(meta.full_name.split(' ')[0] ?? '')
       if (meta.family_name) setLastName(meta.family_name)
       else if (meta.full_name) setLastName(meta.full_name.split(' ').slice(1).join(' '))
 
-      // Load existing player profile
       const { data: player } = await supabase
         .from('players')
         .select('first_name, last_name, phone, gender, usr_rating, club_name')
@@ -139,77 +150,119 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
-      </main>
+      <div className="flex h-screen overflow-hidden">
+        <div className="w-[70px] flex-shrink-0" style={SIDEBAR_STYLE} />
+        <div className="flex-1 flex items-center justify-center" style={{
+          backgroundImage: "url('/COURTNFLOOR.png')", backgroundSize: 'cover',
+          backgroundPosition: 'center 70%', backgroundColor: '#1a0a0a',
+        }}>
+          <div className="w-8 h-8 border-2 border-[#C0392B] border-t-transparent rounded-full animate-spin" />
+        </div>
+        <div className="w-[70px] flex-shrink-0" style={SIDEBAR_STYLE} />
+      </div>
     )
   }
 
   return (
-    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
-      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between" style={{ backgroundColor: 'var(--sl-bg)' }}>
-        <Link href="/"><SiteLogo /></Link>
-        <div className="flex items-center gap-4">
-          <ThemeToggle />
-          <Link href="/dashboard" className="text-xs font-semibold tracking-widest text-[var(--sl-text-30)] hover:text-[var(--sl-text-60)] transition">
+    <div className="flex h-screen overflow-hidden">
+
+      {/* LEFT SIDEBAR */}
+      <div className="w-[70px] flex-shrink-0 relative" style={SIDEBAR_STYLE}>
+        <div className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }} />
+      </div>
+
+      {/* MAIN */}
+      <div className="flex-1 overflow-y-auto" style={{
+        backgroundImage: "url('/COURTNFLOOR.png')",
+        backgroundSize: 'cover',
+        backgroundPosition: 'center 70%',
+        backgroundAttachment: 'fixed',
+        backgroundColor: '#1a0a0a',
+      }}>
+
+        {/* HEADER */}
+        <div className="flex items-center justify-between px-8 py-4"
+          style={{ borderBottom: '1px solid rgba(192,57,43,0.25)', backdropFilter: 'blur(12px)' }}>
+          <Link href="/" className="flex flex-col items-start">
+            <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" className="h-12 w-auto" />
+            <p className="text-sm font-bold tracking-[0.22em] uppercase mt-0.5" style={{ color: '#222' }}>
+              My Profile
+            </p>
+          </Link>
+          <Link href="/dashboard"
+            className="text-[10px] font-bold tracking-[0.14em] uppercase px-4 py-2 rounded-lg transition hover:opacity-80"
+            style={{ color: '#C0392B', border: '1.5px solid rgba(192,57,43,0.4)' }}>
             ← DASHBOARD
           </Link>
         </div>
-      </header>
 
-      <div className="max-w-lg mx-auto px-6 py-10">
-        <div className="mb-8">
-          <p className="text-[var(--sl-text-30)] text-xs tracking-widest mb-1">ACCOUNT</p>
-          <h1 className="text-2xl font-bold tracking-wider">MY PROFILE</h1>
-        </div>
+        {/* CONTENT */}
+        <div className="max-w-lg mx-auto px-8 py-8">
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+          <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.4)' }}>Account</p>
+          <h1 className="text-2xl font-bold tracking-[0.14em] mb-6" style={{ color: '#111' }}>MY PROFILE</h1>
 
-          {/* Personal */}
-          <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6 space-y-4">
-            <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">PERSONAL INFO</p>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>FIRST NAME</label>
-                <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)} placeholder="Jane" className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>LAST NAME</label>
-                <input type="text" value={lastName} onChange={e => setLastName(e.target.value)} placeholder="Smith" className={inputCls} />
-              </div>
-            </div>
-            <div>
-              <label className={labelCls}>PHONE</label>
-              <input type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="+1 (416) 555-0100" className={inputCls} />
-            </div>
-            <div>
-              <label className={labelCls}>GENDER</label>
-              <select value={gender} onChange={e => setGender(e.target.value)} className={inputCls}>
-                <option value="">Select…</option>
-                <option>Male</option>
-                <option>Female</option>
-              </select>
-            </div>
-            {/* Home Club */}
-            <div ref={clubRef}>
-              <label className={labelCls}>HOME CLUB</label>
-              {clubFreeText ? (
+          <form onSubmit={handleSubmit} className="space-y-4">
+
+            {/* Personal */}
+            <div className="rounded-2xl p-6 space-y-4" style={CARD_STYLE}>
+              <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'rgba(0,0,0,0.4)' }}>PERSONAL INFO</p>
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <input
-                    type="text"
-                    value={homeClub}
-                    onChange={e => setHomeClub(e.target.value)}
-                    placeholder="Enter your club name"
-                    autoComplete="off"
-                    className={inputCls}
-                  />
-                  <button type="button" onClick={() => { setClubFreeText(false); setClubQuery(homeClub); setClubOpen(true) }}
-                    className="text-[10px] text-[var(--sl-accent-60)] hover:text-[var(--sl-accent)] transition mt-1 block">
-                    ← Search the list instead
-                  </button>
+                  <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px]" style={{ color: '#222' }}>FIRST NAME</label>
+                  <input type="text" value={firstName} onChange={e => setFirstName(e.target.value)}
+                    placeholder="Jane"
+                    className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                    style={inputStyle} />
                 </div>
-              ) : (
                 <div>
+                  <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px]" style={{ color: '#222' }}>LAST NAME</label>
+                  <input type="text" value={lastName} onChange={e => setLastName(e.target.value)}
+                    placeholder="Smith"
+                    className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                    style={inputStyle} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px]" style={{ color: '#222' }}>PHONE</label>
+                <input type="tel" value={phone} onChange={e => setPhone(e.target.value)}
+                  placeholder="+1 (416) 555-0100"
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                  style={inputStyle} />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px]" style={{ color: '#222' }}>GENDER</label>
+                <select value={gender} onChange={e => setGender(e.target.value)}
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                  style={inputStyle}>
+                  <option value="">Select…</option>
+                  <option>Male</option>
+                  <option>Female</option>
+                </select>
+              </div>
+
+              {/* Home Club */}
+              <div ref={clubRef}>
+                <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px]" style={{ color: '#222' }}>HOME CLUB</label>
+                {clubFreeText ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={homeClub}
+                      onChange={e => setHomeClub(e.target.value)}
+                      placeholder="Enter your club name"
+                      autoComplete="off"
+                      className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                      style={inputStyle}
+                    />
+                    <button type="button" onClick={() => { setClubFreeText(false); setClubQuery(homeClub); setClubOpen(true) }}
+                      className="text-[10px] transition mt-1 block hover:underline"
+                      style={{ color: 'rgba(192,57,43,0.6)' }}>
+                      ← Search the list instead
+                    </button>
+                  </div>
+                ) : (
                   <div className="relative">
                     <input
                       type="text"
@@ -218,74 +271,87 @@ export default function ProfilePage() {
                       onFocus={() => { setClubQuery(noHomeClub ? '' : homeClub); setClubOpen(true) }}
                       placeholder={noHomeClub ? 'No Home Club' : homeClub || 'Search by club name or city…'}
                       autoComplete="off"
-                      className={`${inputCls} pr-7 ${noHomeClub ? 'text-[var(--sl-text-30)]' : ''}`}
+                      className="w-full rounded-lg px-3 py-2 pr-7 text-sm outline-none transition"
+                      style={{ ...inputStyle, color: noHomeClub ? '#888' : '#111' }}
                     />
                     {(homeClub || noHomeClub) && !clubOpen && (
                       <button type="button" onClick={clearClub}
-                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--sl-text-30)] hover:text-[var(--sl-text)] transition text-base leading-none"
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 text-base leading-none transition hover:opacity-60"
+                        style={{ color: '#888' }}
                         aria-label="Clear">×</button>
                     )}
-                  </div>
-                  {clubOpen && (
-                    <div className="mt-1 rounded-lg border border-[var(--sl-border)] bg-[var(--sl-surface-deep)] overflow-hidden z-10 relative">
-                      <button type="button" onMouseDown={e => e.preventDefault()} onClick={selectNoHomeClub}
-                        className="w-full text-left px-3 py-2 text-sm text-[var(--sl-text-40)] hover:bg-[var(--sl-surface-hover)] transition border-b border-[var(--sl-border)] flex items-center gap-2">
-                        <span className="text-[var(--sl-text-20)] font-bold">—</span> No Home Club
-                      </button>
-                      <div className="max-h-40 overflow-y-auto">
-                        {clubResults.length > 0 ? clubResults.map((club, i) => (
-                          <button key={i} type="button" onMouseDown={e => e.preventDefault()} onClick={() => selectClub(club)}
-                            className="w-full text-left px-3 py-2 hover:bg-[var(--sl-surface-hover)] transition">
-                            <span className="text-sm text-[var(--sl-text)]">{club.name}</span>
-                            <span className="text-xs text-[var(--sl-text-30)] ml-1.5">— {club.city}, {club.region}</span>
-                          </button>
-                        )) : (
-                          <p className="px-3 py-2.5 text-sm text-[var(--sl-text-30)]">No clubs found</p>
-                        )}
+                    {clubOpen && (
+                      <div className="mt-1 rounded-lg overflow-hidden z-10 relative"
+                        style={{ border: '1.5px solid rgba(192,57,43,0.3)', background: 'rgba(255,255,255,0.95)' }}>
+                        <button type="button" onMouseDown={e => e.preventDefault()} onClick={selectNoHomeClub}
+                          className="w-full text-left px-3 py-2 text-sm transition flex items-center gap-2"
+                          style={{ color: '#888', borderBottom: '1px solid rgba(192,57,43,0.15)' }}>
+                          <span className="font-bold" style={{ color: '#aaa' }}>—</span> No Home Club
+                        </button>
+                        <div className="max-h-40 overflow-y-auto">
+                          {clubResults.length > 0 ? clubResults.map((club, i) => (
+                            <button key={i} type="button" onMouseDown={e => e.preventDefault()} onClick={() => selectClub(club)}
+                              className="w-full text-left px-3 py-2 transition hover:bg-red-50">
+                              <span className="text-sm" style={{ color: '#111' }}>{club.name}</span>
+                              <span className="text-xs ml-1.5" style={{ color: '#888' }}>— {club.city}, {club.region}</span>
+                            </button>
+                          )) : (
+                            <p className="px-3 py-2.5 text-sm" style={{ color: '#888' }}>No clubs found</p>
+                          )}
+                        </div>
+                        <button type="button" onMouseDown={e => e.preventDefault()} onClick={selectFreeText}
+                          className="w-full text-left px-3 py-2 text-sm transition hover:bg-red-50"
+                          style={{ color: '#C0392B', borderTop: '1px solid rgba(192,57,43,0.15)' }}>
+                          + My club isn&apos;t listed — add it
+                        </button>
                       </div>
-                      <button type="button" onMouseDown={e => e.preventDefault()} onClick={selectFreeText}
-                        className="w-full text-left px-3 py-2 text-sm text-[var(--sl-accent-60)] hover:bg-[var(--sl-surface-hover)] hover:text-[var(--sl-accent)] transition border-t border-[var(--sl-border)]">
-                        + My club isn&apos;t listed — add it
-                      </button>
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
 
-          {/* Squash rating */}
-          <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6 space-y-4">
-            <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)]">CLUB LOCKER RATING</p>
-            <div>
-              <label className={labelCls}>YOUR CURRENT RATING</label>
-              <input
-                type="number"
-                value={usrRating}
-                onChange={e => handleRatingChange(e.target.value)}
-                placeholder="e.g. 4.5"
-                step="0.01" min="0" max="7"
-                className={inputCls}
-              />
-              {usrRating && division && (
-                <p className="text-[var(--sl-accent)] text-xs mt-2 font-semibold">
-                  Division: <span className="font-bold">{division}</span>
-                </p>
-              )}
+            {/* Squash rating */}
+            <div className="rounded-2xl p-6 space-y-4" style={CARD_STYLE}>
+              <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'rgba(0,0,0,0.4)' }}>CLUB LOCKER RATING</p>
+              <div>
+                <label className="block text-[10px] font-bold tracking-[0.14em] uppercase mb-[5px]" style={{ color: '#222' }}>YOUR CURRENT RATING</label>
+                <input
+                  type="number"
+                  value={usrRating}
+                  onChange={e => handleRatingChange(e.target.value)}
+                  placeholder="e.g. 4.5"
+                  step="0.01" min="0" max="7"
+                  className="w-full rounded-lg px-3 py-2 text-sm outline-none transition"
+                  style={inputStyle}
+                />
+                {usrRating && division && (
+                  <p className="text-xs mt-2 font-semibold" style={{ color: '#C0392B' }}>
+                    Division: <span className="font-bold">{division}</span>
+                  </p>
+                )}
+              </div>
             </div>
-          </div>
 
-          {error && <p className="text-red-400 text-sm">{error}</p>}
+            {error && <p className="text-red-500 text-sm">{error}</p>}
 
-          <button
-            type="submit"
-            disabled={saving || saved}
-            className="w-full py-4 rounded-xl bg-[var(--sl-accent)] text-[var(--sl-btn-text)] font-bold tracking-widest text-sm hover:bg-[var(--sl-accent-hover)] transition disabled:opacity-50"
-          >
-            {saved ? 'SAVED!' : saving ? 'SAVING…' : 'SAVE PROFILE'}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={saving || saved}
+              className="w-full py-4 rounded-xl text-sm font-bold tracking-[0.14em] uppercase text-white transition hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: '#C0392B' }}>
+              {saved ? 'SAVED!' : saving ? 'SAVING…' : 'SAVE PROFILE'}
+            </button>
+          </form>
+        </div>
       </div>
-    </main>
+
+      {/* RIGHT SIDEBAR */}
+      <div className="w-[70px] flex-shrink-0 relative" style={SIDEBAR_STYLE}>
+        <div className="absolute bottom-0 left-0 right-0 h-[220px] pointer-events-none"
+          style={{ background: 'linear-gradient(to top, rgba(192,57,43,0.45), transparent)' }} />
+      </div>
+
+    </div>
   )
 }
