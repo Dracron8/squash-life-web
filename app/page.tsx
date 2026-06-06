@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
@@ -20,14 +21,15 @@ const SIDEBAR_STYLE = {
 
 export default async function Home() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  const [{ data: tournaments }, { data: { user } }] = await Promise.all([
+  const [{ data: tournaments }] = await Promise.all([
     supabase
       .from('tournaments')
       .select(`id, name, status, tournament_details (start_date, singles_fee, clubs (name))`)
       .eq('status', 'registration_open')
       .order('created_at', { ascending: true }),
-    supabase.auth.getUser(),
   ])
 
   let isTD = false
