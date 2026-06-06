@@ -371,7 +371,7 @@ export default function RegisterPage() {
                           >+</button>
                         </div>
                         <p className="text-[var(--sl-text-20)] text-[10px] mt-1">
-                          {RATING_MIN.toFixed(2)}–{RATING_MAX.toFixed(2)} · ±0.01
+                          Verify Current Rating
                         </p>
                       </div>
 
