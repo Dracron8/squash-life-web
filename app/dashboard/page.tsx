@@ -267,7 +267,7 @@ export default function DashboardPage() {
                   You haven&apos;t entered any tournaments yet.
                 </p>
                 <Link
-                  href="/"
+                  href="/tournaments"
                   className="inline-block text-sm font-bold tracking-[0.14em] text-white px-6 py-3 rounded-xl transition hover:opacity-90"
                   style={{ background: '#C0392B' }}
                 >

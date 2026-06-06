@@ -199,7 +199,7 @@ export default async function TournamentPage({ params }: Props) {
             </p>
           </Link>
           <div className="flex items-center gap-3">
-            <Link href="/"
+            <Link href="/tournaments"
               className="text-[10px] font-bold tracking-[0.14em] uppercase px-4 py-2 rounded-lg transition hover:opacity-80"
               style={{ color: '#C0392B', border: '1.5px solid rgba(192,57,43,0.4)' }}>
               ← ALL TOURNAMENTS
