@@ -84,7 +84,7 @@ export default function DashboardPage() {
           .from('registrations')
           .select('id, division, payment_status, tournaments(id, name, tournament_details(start_date))')
           .eq('user_id', userId)
-          .order('registered_at', { ascending: false })
+          .order('created_at', { ascending: false })
           .limit(10),
       ])
 
