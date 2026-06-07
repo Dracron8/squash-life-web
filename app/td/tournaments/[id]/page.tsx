@@ -4,10 +4,28 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import SiteLogo from '@/app/components/SiteLogo'
-import ThemeToggle from '@/app/components/ThemeToggle'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type TournamentDetail = {
+  start_date: string | null
+  end_date: string | null
+  daily_start_time: string | null
+  daily_end_time: string | null
+  courts_available: number | null
+  match_duration_minutes: number | null
+  warm_up_minutes: number | null
+  min_rest_hours: number | null
+  max_matches_per_day: number | null
+  singles_entry_fee: number | null
+  has_singles_draw: boolean | null
+  has_doubles_draw: boolean | null
+  max_players: number | null
+  registration_opens: string | null
+  registration_deadline: string | null
+  td_email: string | null
+  clubs: { name: string; city: string | null } | null
+}
 
 type Tournament = {
   id: string
@@ -16,22 +34,6 @@ type Tournament = {
   draw_type: string
   td_id: string
   tournament_details: TournamentDetail[]
-}
-
-type TournamentDetail = {
-  start_date: string | null
-  end_date: string | null
-  daily_start_time: string | null
-  daily_end_time: string | null
-  singles_fee: number | null
-  max_players: number | null
-  registration_deadline: string | null
-  courts_available: number | null
-  match_duration_minutes: number | null
-  min_rest_minutes: number | null
-  has_singles_draw: boolean | null
-  has_doubles_draw: boolean | null
-  clubs: { name: string; address: string; city: string | null } | null
 }
 
 type Registration = {
@@ -43,7 +45,7 @@ type Registration = {
   division: string | null
   draw_segment: string
   payment_status: string
-  registered_at: string
+  created_at: string
   club_name?: string
 }
 
@@ -60,50 +62,72 @@ type Match = {
   next_match_id: string | null
 }
 
-type PlayerMap = Record<string, string>
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
 const TABS = ['REGISTRATIONS', 'DRAW', 'SCORE ENTRY', 'SETTINGS'] as const
 type Tab = typeof TABS[number]
 
-const STATUS_LABELS: Record<string, string> = {
-  setup_pending:     'SETUP',
-  registration_open: 'OPEN',
-  active:            'ACTIVE',
-  completed:         'COMPLETED',
+const STATUS_LABEL: Record<string, string> = {
+  setup_pending: 'SETUP', registration_open: 'OPEN', active: 'ACTIVE', completed: 'COMPLETED',
 }
-
-const STATUS_COLORS: Record<string, string> = {
-  setup_pending:     'bg-[var(--sl-surface-deep)] text-[var(--sl-text-40)] border-[var(--sl-border)]',
-  registration_open: 'bg-green-500/10 text-green-400 border-green-500/20',
-  active:            'bg-[var(--sl-accent-10)] text-[var(--sl-accent)] border-[var(--sl-accent-20)]',
-  completed:         'bg-[var(--sl-surface-deep)] text-[var(--sl-text-30)] border-[var(--sl-border)]',
+const STATUS_COLOR: Record<string, string> = {
+  setup_pending: 'bg-neutral-800 text-neutral-400 border-neutral-700',
+  registration_open: 'bg-green-900/40 text-green-400 border-green-700/40',
+  active: 'bg-red-900/40 text-red-400 border-red-700/40',
+  completed: 'bg-neutral-800 text-neutral-500 border-neutral-700',
 }
-
-const PAY_COLORS: Record<string, string> = {
-  fully_paid:   'text-green-400',
-  deposit_paid: 'text-yellow-400',
-  waitlist:     'text-[var(--sl-text-40)]',
-  pending:      'text-[var(--sl-text-40)]',
+const PAY_COLOR: Record<string, string> = {
+  fully_paid: 'text-green-400', deposit_paid: 'text-yellow-400',
+  waitlist: 'text-neutral-500', pending: 'text-neutral-500', paid: 'text-green-400',
 }
-
+const PAY_DOT: Record<string, string> = {
+  fully_paid: 'bg-green-500', deposit_paid: 'bg-yellow-500',
+  waitlist: 'bg-red-500', pending: 'bg-neutral-500', paid: 'bg-green-500',
+}
 const PAY_CYCLE: Record<string, string> = {
-  waitlist:     'deposit_paid',
-  deposit_paid: 'fully_paid',
-  fully_paid:   'waitlist',
-  pending:      'deposit_paid',
+  waitlist: 'deposit_paid', deposit_paid: 'fully_paid', fully_paid: 'waitlist',
+  pending: 'deposit_paid', paid: 'fully_paid',
 }
 
-function dotColor(status: string): string {
-  if (status === 'fully_paid')   return '#22c55e'
-  if (status === 'deposit_paid') return '#eab308'
-  return '#ef4444'
+function dotColor(s: string) { return PAY_DOT[s] ?? 'bg-neutral-500' }
+
+// ─── Capacity calc (same formula as wizard) ───────────────────────────────────
+
+function calcCapacityFromDetail(d: TournamentDetail): number {
+  const courts = d.courts_available ?? 0
+  const matchMins = d.match_duration_minutes ?? 40
+  const warmup = d.warm_up_minutes ?? 10
+  const slotMins = matchMins + warmup
+  const minRestMins = (d.min_rest_hours ?? 3) * 60
+  const maxPerDay = d.max_matches_per_day ?? 2
+
+  const toMins = (t: string | null) => {
+    if (!t) return 0
+    const [h, m] = t.split(':').map(Number)
+    return (h || 0) * 60 + (m || 0)
+  }
+
+  const start = toMins(d.daily_start_time)
+  const end = toMins(d.daily_end_time)
+  const dailyMins = Math.max(0, end - start)
+
+  let days = 1
+  if (d.start_date && d.end_date) {
+    const ms = new Date(d.end_date).getTime() - new Date(d.start_date).getTime()
+    days = Math.max(1, Math.round(ms / 86400000) + 1)
+  }
+
+  if (dailyMins <= 0 || courts <= 0 || slotMins <= 0) return 0
+  const totalSlots = Math.floor(dailyMins / slotMins) * courts * days
+  const maxByRest = Math.max(1, Math.floor((dailyMins - matchMins) / (matchMins + minRestMins)) + 1)
+  const perDayCap = Math.min(maxPerDay, maxByRest)
+  const playerMatchCap = perDayCap * days
+  const raw = Math.floor((totalSlots * 2) / playerMatchCap)
+  if (raw < 2) return 0
+  return Math.pow(2, Math.floor(Math.log2(raw)))
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function TournamentDetailPage() {
+export default function TournamentPage() {
   const router = useRouter()
   const params = useParams()
   const id = params.id as string
@@ -112,9 +136,9 @@ export default function TournamentDetailPage() {
   const [tournament, setTournament] = useState<Tournament | null>(null)
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [matches, setMatches] = useState<Match[]>([])
-  const [playerMap, setPlayerMap] = useState<PlayerMap>({})
+  const [playerMap, setPlayerMap] = useState<Record<string, string>>({})
   const [activeTab, setActiveTab] = useState<Tab>('REGISTRATIONS')
-  const [activeDivision, setActiveDivision] = useState<string>('')
+  const [activeDivision, setActiveDivision] = useState('')
   const [generatingDraw, setGeneratingDraw] = useState(false)
   const [scoreModal, setScoreModal] = useState<Match | null>(null)
   const [scoreInput, setScoreInput] = useState('')
@@ -129,16 +153,16 @@ export default function TournamentDetailPage() {
 
     const { data: t } = await supabase
       .from('tournaments')
-      .select(`id, name, status, draw_type, td_id, tournament_details(start_date, end_date, daily_start_time, daily_end_time, singles_fee, max_players, registration_deadline, courts_available, match_duration_minutes, min_rest_minutes, has_singles_draw, has_doubles_draw, clubs(name, address, city))`)
+      .select('id, name, status, draw_type, td_id, tournament_details(start_date, end_date, daily_start_time, daily_end_time, courts_available, match_duration_minutes, warm_up_minutes, min_rest_hours, max_matches_per_day, singles_entry_fee, has_singles_draw, has_doubles_draw, max_players, registration_opens, registration_deadline, td_email, clubs(name, city))')
       .eq('id', id)
       .single()
 
-    if (!t || t.td_id !== user.id) { router.push('/td'); return }
+    if (!t || (t as unknown as Tournament).td_id !== user.id) { router.push('/td'); return }
     setTournament(t as unknown as Tournament)
 
     const { data: regs } = await supabase
       .from('registrations')
-      .select('id, user_id, first_name, last_name, usr_rating, division, draw_segment, payment_status, registered_at')
+      .select('id, user_id, first_name, last_name, usr_rating, division, draw_segment, payment_status, created_at')
       .eq('tournament_id', id)
       .order('division', { ascending: true })
       .order('usr_rating', { ascending: false })
@@ -146,12 +170,10 @@ export default function TournamentDetailPage() {
     const regList = (regs ?? []) as Registration[]
 
     if (regList.length > 0) {
-      const userIds = regList.map(r => r.user_id)
       const { data: players } = await supabase
         .from('players')
         .select('user_id, club_name')
-        .in('user_id', userIds)
-
+        .in('user_id', regList.map(r => r.user_id))
       const clubMap: Record<string, string> = {}
       for (const p of (players ?? [])) clubMap[p.user_id] = p.club_name ?? ''
       setRegistrations(regList.map(r => ({ ...r, club_name: clubMap[r.user_id] ?? '' })))
@@ -163,32 +185,34 @@ export default function TournamentDetailPage() {
       .from('matches')
       .select('id, round_number, draw_segment, division, player1_id, player2_id, winner_id, score, match_index, next_match_id')
       .eq('tournament_id', id)
-      .order('round_number', { ascending: true })
-      .order('match_index', { ascending: true })
+      .order('round_number')
+      .order('match_index')
 
     setMatches((m ?? []) as Match[])
 
-    const pm: PlayerMap = {}
+    const pm: Record<string, string> = {}
     for (const r of regList) pm[r.user_id] = `${r.first_name} ${r.last_name}`.trim()
     setPlayerMap(pm)
-
     setLoading(false)
   }, [id, router])
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  function divisions() {
+    const s = new Set([
+      ...registrations.map(r => r.division).filter(Boolean),
+      ...matches.map(m => m.division).filter(Boolean),
+    ])
+    return [...s].sort() as string[]
+  }
+
+  const divs = divisions()
+
   useEffect(() => {
-    const divs = divisions()
     if (divs.length > 0 && !activeDivision) setActiveDivision(divs[0])
   })
 
-  function divisions(): string[] {
-    const from_regs = [...new Set(registrations.map(r => r.division).filter(Boolean))] as string[]
-    const from_matches = [...new Set(matches.map(m => m.division).filter(Boolean))] as string[]
-    return [...new Set([...from_regs, ...from_matches])].sort()
-  }
-
-  function playerName(uid: string | null): string {
+  function playerName(uid: string | null) {
     if (!uid) return 'BYE'
     return playerMap[uid] || uid.slice(0, 8) + '...'
   }
@@ -224,235 +248,184 @@ export default function TournamentDetailPage() {
       .update({ winner_id, score: scoreInput.trim() || null })
       .eq('id', scoreModal.id)
     if (err) { setError(err.message); setSavingScore(false); return }
-    setScoreModal(null)
-    setScoreInput('')
-    setScoreWinner(null)
-    setSavingScore(false)
+    setScoreModal(null); setScoreInput(''); setScoreWinner(null); setSavingScore(false)
     await fetchAll()
   }
 
+  async function cyclePayment(regId: string, current: string) {
+    const next = PAY_CYCLE[current] ?? 'deposit_paid'
+    const supabase = createClient()
+    const { error: err } = await supabase.from('registrations').update({ payment_status: next }).eq('id', regId)
+    if (!err) setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, payment_status: next } : r))
+  }
+
   async function deleteTournament() {
-    if (!confirm(`Delete "${tournament?.name}"? This cannot be undone.`)) return
     const supabase = createClient()
     await supabase.from('tournaments').delete().eq('id', id)
     router.push('/td')
   }
 
-  async function cyclePaymentStatus(regId: string, currentStatus: string) {
-    const nextStatus = PAY_CYCLE[currentStatus] ?? 'deposit_paid'
-    const supabase = createClient()
-    const { error: err } = await supabase
-      .from('registrations')
-      .update({ payment_status: nextStatus })
-      .eq('id', regId)
-    if (!err) {
-      setRegistrations(prev => prev.map(r => r.id === regId ? { ...r, payment_status: nextStatus } : r))
-    }
-  }
-
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[var(--sl-bg)] flex items-center justify-center">
-        <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
-      </main>
-    )
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center h-64">
+      <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+    </div>
+  )
 
   if (!tournament) return null
 
   const detail = Array.isArray(tournament.tournament_details)
     ? tournament.tournament_details[0]
-    : tournament.tournament_details
+    : tournament.tournament_details as unknown as TournamentDetail
 
-  // ── Capacity calculation ──────────────────────────────────────────────────
-  function calcCapacity() {
-    if (!detail) return null
-    const courts = detail.courts_available ?? 0
-    const matchMins = detail.match_duration_minutes ?? 40
-
-    // Parse daily hours
-    const parseTime = (t: string | null) => {
-      if (!t) return 0
-      const [h, m] = t.split(':').map(Number)
-      return h * 60 + (m || 0)
-    }
-    const startMins = parseTime(detail.daily_start_time)
-    const endMins   = parseTime(detail.daily_end_time)
-    const dailyMins = endMins - startMins
-    const slotsPerCourtPerDay = Math.floor(dailyMins / matchMins)
-
-    // Days
-    let days = 1
-    if (detail.start_date && detail.end_date) {
-      const ms = new Date(detail.end_date).getTime() - new Date(detail.start_date).getTime()
-      days = Math.max(1, Math.round(ms / 86400000) + 1)
-    }
-
-    const totalSlots = courts * slotsPerCourtPerDay * days
-    const numDivisions = Math.max(1, divs.length)
-    const slotsPerDiv  = Math.floor(totalSlots / numDivisions)
-
-    // KO+Plate: ~3N/2 - 2 matches for N players → N ≈ (slots + 2) / 1.5
-    const rawMax = Math.floor((slotsPerDiv + 2) / 1.5)
-    // Round down to nearest power of 2 for clean bracket
-    const comfortableMax = Math.pow(2, Math.floor(Math.log2(rawMax)))
-
-    return { courts, matchMins, dailyMins, slotsPerCourtPerDay, days, totalSlots, numDivisions, comfortableMax }
-  }
-
-  const divs = divisions()
-  const capacity = calcCapacity()
+  const capacity = detail ? calcCapacityFromDetail(detail) : 0
   const divMatches = matches.filter(m => m.division === activeDivision)
   const mainMatches = divMatches.filter(m => m.draw_segment === 'main')
   const plateMatches = divMatches.filter(m => m.draw_segment === 'plate')
   const maxRound = mainMatches.length > 0 ? Math.max(...mainMatches.map(m => m.round_number)) : 0
 
-  return (
-    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
-      {/* Header */}
-      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between">
-        <Link href="/td"><SiteLogo /></Link>
-        <ThemeToggle />
-      </header>
+  // Div counts
+  const divCounts: Record<string, number> = {}
+  registrations.forEach(r => { if (r.division) divCounts[r.division] = (divCounts[r.division] || 0) + 1 })
 
+  return (
+    <div>
       {/* Tournament header */}
-      <div className="px-6 pt-8 pb-0 max-w-5xl mx-auto">
-        <Link href="/td" className="text-xs text-[var(--sl-text-30)] hover:text-[var(--sl-accent)] transition">← MY TOURNAMENTS</Link>
+      <div className="border-b border-neutral-800 px-6 pt-8 pb-0 max-w-5xl mx-auto">
+        <Link href="/td" className="text-xs text-neutral-600 hover:text-neutral-300 transition">← MY TOURNAMENTS</Link>
         <div className="flex items-start gap-4 mt-3 mb-6">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl font-bold tracking-wider truncate">{tournament.name} Dashboard</h1>
+            <h1 className="text-xl font-bold tracking-wide truncate">{tournament.name}</h1>
             {detail && (
-              <p className="text-[var(--sl-text-40)] text-xs mt-1">
-                {detail.start_date
-                  ? new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
-                  : 'Date TBD'}
-                {detail.clubs ? ` · ${detail.clubs.name}` : ''}
+              <p className="text-neutral-500 text-xs mt-1">
+                {detail.start_date ? new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date TBD'}
+                {detail.clubs?.name ? ` · ${detail.clubs.name}` : ''}
                 {detail.courts_available ? ` · ${detail.courts_available} courts` : ''}
               </p>
             )}
           </div>
-          <span className={`shrink-0 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded border ${STATUS_COLORS[tournament.status] ?? STATUS_COLORS.setup_pending}`}>
-            {STATUS_LABELS[tournament.status] ?? tournament.status.toUpperCase()}
+          <span className={`shrink-0 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded border ${STATUS_COLOR[tournament.status] ?? STATUS_COLOR.setup_pending}`}>
+            {STATUS_LABEL[tournament.status] ?? tournament.status.toUpperCase()}
           </span>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1 border-b border-[var(--sl-border)]">
+        <div className="flex gap-1">
           {TABS.map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
+            <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 text-[11px] font-bold tracking-widest transition border-b-2 -mb-px ${
-                activeTab === tab
-                  ? 'border-[var(--sl-accent)] text-[var(--sl-accent)]'
-                  : 'border-transparent text-[var(--sl-text-40)] hover:text-[var(--sl-text-60)]'
-              }`}
-            >
+                activeTab === tab ? 'border-red-600 text-red-500' : 'border-transparent text-neutral-500 hover:text-neutral-300'
+              }`}>
               {tab}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tab content */}
       <div className="px-6 py-8 max-w-5xl mx-auto">
         {error && (
-          <div className="mb-6 text-sm text-red-400 border border-red-500/20 bg-red-500/5 rounded-xl px-4 py-3">
+          <div className="mb-6 bg-red-900/20 border border-red-700/40 text-red-400 text-sm rounded-xl px-4 py-3 flex justify-between">
             {error}
-            <button onClick={() => setError(null)} className="ml-3 text-red-300 hover:text-red-200">✕</button>
+            <button onClick={() => setError(null)} className="ml-3 text-red-600">✕</button>
           </div>
         )}
 
-        {/* ── REGISTRATIONS ─────────────────────────────────────────────────── */}
+        {/* ── REGISTRATIONS ─────────────────────────────────────────────── */}
         {activeTab === 'REGISTRATIONS' && (
           <div>
             {/* Capacity panel */}
-            {capacity && (
-              <div className="mb-6 bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl px-5 py-4">
-                <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] uppercase mb-3">Court Capacity</p>
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--sl-text-60)]">
-                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.courts}</span> courts</span>
-                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.days}</span> day{capacity.days !== 1 ? 's' : ''}</span>
-                  <span><span className="font-bold text-[var(--sl-text)]">{Math.round(capacity.dailyMins / 60)}h</span>/day</span>
-                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.matchMins}min</span> matches</span>
-                  <span className="text-[var(--sl-border)]">→</span>
-                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.totalSlots}</span> total match slots</span>
+            {detail && capacity > 0 && (
+              <div className="mb-6 bg-neutral-900 border border-neutral-800 rounded-2xl px-5 py-4">
+                <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-3">Court Capacity</p>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-neutral-400">
+                  <span><span className="font-bold text-white">{detail.courts_available}</span> courts</span>
+                  {detail.start_date && detail.end_date && (
+                    <span><span className="font-bold text-white">
+                      {Math.max(1, Math.round((new Date(detail.end_date).getTime() - new Date(detail.start_date).getTime()) / 86400000) + 1)}
+                    </span> days</span>
+                  )}
+                  <span><span className="font-bold text-white">{detail.match_duration_minutes}</span>min matches</span>
+                  <span className="text-neutral-700">→</span>
+                  <span>comfortable max <span className="font-bold text-red-500">{capacity} players</span></span>
                 </div>
-                <div className="mt-3 pt-3 border-t border-[var(--sl-border)] flex flex-wrap gap-x-6 gap-y-1 text-xs">
-                  <span className="text-[var(--sl-text-40)]">
-                    Across <span className="font-bold text-[var(--sl-text)]">{capacity.numDivisions}</span> division{capacity.numDivisions !== 1 ? 's' : ''}
-                    {' '}→ comfortable max{' '}
-                    <span className="font-bold text-[var(--sl-accent)]">~{capacity.comfortableMax} players/division</span>
-                    {' '}({capacity.numDivisions * capacity.comfortableMax} total)
-                  </span>
+                <div className="mt-2 text-xs text-neutral-600">
+                  {registrations.length} registered · {Math.max(0, capacity - registrations.length)} spots remaining
                 </div>
               </div>
             )}
 
             <div className="flex items-center justify-between mb-6">
-              <p className="text-[var(--sl-text-40)] text-sm">
-                {registrations.length} registered
-              </p>
+              <p className="text-neutral-500 text-sm">{registrations.length} registered</p>
               <div className="flex gap-3">
                 {tournament.status === 'setup_pending' && (
-                  <button
-                    onClick={() => setStatus('registration_open')}
-                    className="text-xs font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] px-4 py-2 rounded-xl hover:bg-[var(--sl-accent-hover)] transition"
-                  >
+                  <button onClick={() => setStatus('registration_open')}
+                    className="bg-red-700 hover:bg-red-600 text-white text-xs font-bold tracking-widest px-4 py-2 rounded-xl transition">
                     OPEN REGISTRATION
                   </button>
                 )}
                 {tournament.status === 'registration_open' && (
-                  <button
-                    onClick={() => setStatus('active')}
-                    className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] border border-[var(--sl-border)] px-4 py-2 rounded-xl hover:border-[var(--sl-text-20)] transition"
-                  >
+                  <button onClick={() => setStatus('active')}
+                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2 rounded-xl hover:border-neutral-500 transition">
                     CLOSE REGISTRATION
+                  </button>
+                )}
+                {tournament.status === 'active' && (
+                  <button onClick={() => setStatus('completed')}
+                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2 rounded-xl hover:border-neutral-500 transition">
+                    MARK COMPLETED
                   </button>
                 )}
               </div>
             </div>
 
+            {/* Division summary */}
+            {divs.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-5">
+                {divs.map(d => (
+                  <div key={d} className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs">
+                    <span className="font-bold text-red-500">{d}</span>
+                    <span className="text-neutral-500 ml-2">{divCounts[d] ?? 0} players</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {registrations.length === 0 ? (
-              <div className="text-center py-16 border border-dashed border-[var(--sl-border)] rounded-2xl">
-                <p className="text-[var(--sl-text-30)] text-sm mb-2">No registrations yet.</p>
+              <div className="border border-dashed border-neutral-800 rounded-2xl py-16 text-center">
+                <p className="text-neutral-500 text-sm">No registrations yet.</p>
                 {tournament.status === 'setup_pending' && (
-                  <p className="text-[var(--sl-text-20)] text-xs">Open registration so players can sign up.</p>
+                  <p className="text-neutral-700 text-xs mt-2">Open registration so players can sign up.</p>
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-[var(--sl-border)]">
+              <div className="overflow-x-auto rounded-2xl border border-neutral-800">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-[var(--sl-border)] bg-[var(--sl-surface)]">
-                      {['NAME', 'DIVISION', 'USR', 'CLUB', 'PAYMENT', 'DATE'].map(h => (
-                        <th key={h} className="text-left text-[10px] font-bold tracking-widest text-[var(--sl-text-40)] px-4 py-3">{h}</th>
+                    <tr className="border-b border-neutral-800 bg-neutral-900">
+                      {['NAME', 'DIV', 'USR', 'CLUB', 'PAYMENT', 'DATE'].map(h => (
+                        <th key={h} className="text-left text-[10px] font-bold tracking-widest text-neutral-500 px-4 py-3">{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {registrations.map((r, i) => (
-                      <tr key={r.id} className={`border-b border-[var(--sl-border)] last:border-0 ${i % 2 === 0 ? '' : 'bg-[var(--sl-surface)]'}`}>
-                        <td className="px-4 py-3 font-medium">{r.first_name} {r.last_name}</td>
+                      <tr key={r.id} className={`border-b border-neutral-800 last:border-0 ${i % 2 === 0 ? '' : 'bg-neutral-900/50'}`}>
+                        <td className="px-4 py-3 font-medium text-neutral-100">{r.first_name} {r.last_name}</td>
                         <td className="px-4 py-3">
-                          <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">{r.division ?? '—'}</span>
+                          <span className="text-[10px] font-bold tracking-widest text-red-500">{r.division ?? '—'}</span>
                         </td>
-                        <td className="px-4 py-3 text-[var(--sl-text-60)]">{r.usr_rating ?? '—'}</td>
-                        <td className="px-4 py-3 text-[var(--sl-text-60)] text-xs">{r.club_name || '—'}</td>
+                        <td className="px-4 py-3 text-neutral-400">{r.usr_rating ?? '—'}</td>
+                        <td className="px-4 py-3 text-neutral-500 text-xs">{r.club_name || '—'}</td>
                         <td className="px-4 py-3">
-                          <button
-                            onClick={() => cyclePaymentStatus(r.id, r.payment_status)}
-                            title={`${r.payment_status} — click to change`}
-                            className="flex items-center gap-1.5 hover:opacity-80 transition"
-                          >
-                            <span className="w-2.5 h-2.5 rounded-full shrink-0 inline-block" style={{ backgroundColor: dotColor(r.payment_status) }} />
-                            <span className={`text-[10px] font-bold tracking-widest ${PAY_COLORS[r.payment_status] ?? 'text-[var(--sl-text-40)]'}`}>
+                          <button onClick={() => cyclePayment(r.id, r.payment_status)}
+                            className="flex items-center gap-1.5 hover:opacity-70 transition">
+                            <span className={`w-2 h-2 rounded-full ${dotColor(r.payment_status)}`} />
+                            <span className={`text-[10px] font-bold tracking-widest ${PAY_COLOR[r.payment_status] ?? 'text-neutral-500'}`}>
                               {r.payment_status.replace(/_/g, ' ').toUpperCase()}
                             </span>
                           </button>
                         </td>
-                        <td className="px-4 py-3 text-[var(--sl-text-30)] text-xs">
-                          {r.registered_at ? new Date(r.registered_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}
+                        <td className="px-4 py-3 text-neutral-600 text-xs">
+                          {r.created_at ? new Date(r.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}
                         </td>
                       </tr>
                     ))}
@@ -463,143 +436,98 @@ export default function TournamentDetailPage() {
           </div>
         )}
 
-        {/* ── DRAW ──────────────────────────────────────────────────────────── */}
+        {/* ── DRAW ──────────────────────────────────────────────────────── */}
         {activeTab === 'DRAW' && (
           <div>
             {divs.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
                 {divs.map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setActiveDivision(d)}
+                  <button key={d} onClick={() => setActiveDivision(d)}
                     className={`text-xs font-bold tracking-widest px-4 py-2 rounded-xl border transition ${
-                      activeDivision === d
-                        ? 'border-[var(--sl-accent)] bg-[var(--sl-accent-10)] text-[var(--sl-accent)]'
-                        : 'border-[var(--sl-border)] text-[var(--sl-text-40)] hover:border-[var(--sl-text-20)]'
-                    }`}
-                  >
+                      activeDivision === d ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
+                    }`}>
                     {d}
                   </button>
                 ))}
               </div>
             )}
-
             <div className="flex gap-3 mb-8">
-              <button
-                onClick={() => generateDraw(false)}
-                disabled={generatingDraw || matches.length > 0}
-                className="text-xs font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] px-4 py-2.5 rounded-xl hover:bg-[var(--sl-accent-hover)] disabled:opacity-40 transition"
-              >
+              <button onClick={() => generateDraw(false)} disabled={generatingDraw || matches.length > 0}
+                className="bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl transition">
                 {generatingDraw ? 'GENERATING...' : 'GENERATE DRAW'}
               </button>
               {matches.length > 0 && (
-                <button
-                  onClick={() => { if (confirm('Regenerate draw? Existing scores will be lost.')) generateDraw(true) }}
+                <button onClick={() => { if (confirm('Regenerate? Existing scores will be lost.')) generateDraw(true) }}
                   disabled={generatingDraw}
-                  className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] border border-[var(--sl-border)] px-4 py-2.5 rounded-xl hover:border-[var(--sl-text-20)] disabled:opacity-40 transition"
-                >
+                  className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 disabled:opacity-40 transition">
                   REGENERATE (RESET)
                 </button>
               )}
             </div>
-
             {divs.length === 0 && (
-              <p className="text-[var(--sl-text-30)] text-sm py-10 text-center">
-                No divisions yet. Players need to register first.
-              </p>
+              <p className="text-neutral-500 text-sm py-10 text-center">No divisions yet. Players need to register first.</p>
             )}
-
             {mainMatches.length > 0 && (
-              <div>
-                <h3 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] mb-4">MAIN DRAW — {activeDivision}</h3>
+              <div className="mb-10">
+                <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">MAIN DRAW — {activeDivision}</p>
                 <div className="overflow-x-auto">
                   <BracketView matches={mainMatches} maxRound={maxRound} playerName={playerName} />
                 </div>
               </div>
             )}
-
             {plateMatches.length > 0 && (
-              <div className="mt-10">
-                <h3 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] mb-4">PLATE DRAW — {activeDivision}</h3>
+              <div>
+                <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">PLATE DRAW — {activeDivision}</p>
                 <div className="overflow-x-auto">
-                  <BracketView
-                    matches={plateMatches}
-                    maxRound={Math.max(...plateMatches.map(m => m.round_number))}
-                    playerName={playerName}
-                  />
+                  <BracketView matches={plateMatches} maxRound={Math.max(...plateMatches.map(m => m.round_number))} playerName={playerName} />
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* ── SCORE ENTRY ───────────────────────────────────────────────────── */}
+        {/* ── SCORE ENTRY ───────────────────────────────────────────────── */}
         {activeTab === 'SCORE ENTRY' && (
           <div>
             {divs.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
                 {divs.map(d => (
-                  <button
-                    key={d}
-                    onClick={() => setActiveDivision(d)}
+                  <button key={d} onClick={() => setActiveDivision(d)}
                     className={`text-xs font-bold tracking-widest px-4 py-2 rounded-xl border transition ${
-                      activeDivision === d
-                        ? 'border-[var(--sl-accent)] bg-[var(--sl-accent-10)] text-[var(--sl-accent)]'
-                        : 'border-[var(--sl-border)] text-[var(--sl-text-40)] hover:border-[var(--sl-text-20)]'
-                    }`}
-                  >
+                      activeDivision === d ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
+                    }`}>
                     {d}
                   </button>
                 ))}
               </div>
             )}
-
             {divMatches.length === 0 ? (
-              <p className="text-[var(--sl-text-30)] text-sm py-10 text-center">No matches yet. Generate the draw first.</p>
+              <p className="text-neutral-500 text-sm py-10 text-center">No matches yet. Generate the draw first.</p>
             ) : (
               <div className="space-y-2">
                 {divMatches
                   .filter(m => m.player1_id && m.player2_id)
                   .sort((a, b) => a.round_number - b.round_number || a.match_index - b.match_index)
                   .map(m => {
-                    const isComplete = !!m.winner_id
+                    const done = !!m.winner_id
                     return (
-                      <button
-                        key={m.id}
-                        onClick={() => {
-                          if (isComplete) return
-                          setScoreModal(m)
-                          setScoreInput(m.score ?? '')
-                          setScoreWinner(null)
-                        }}
-                        disabled={isComplete}
-                        className={`w-full text-left bg-[var(--sl-surface)] border rounded-2xl p-4 transition ${
-                          isComplete
-                            ? 'border-[var(--sl-border)] opacity-60 cursor-default'
-                            : 'border-[var(--sl-border)] hover:border-[var(--sl-accent-30)] cursor-pointer'
-                        }`}
-                      >
+                      <button key={m.id} disabled={done}
+                        onClick={() => { if (done) return; setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(null) }}
+                        className={`w-full text-left bg-neutral-900 border rounded-2xl p-4 transition ${
+                          done ? 'border-neutral-800 opacity-60 cursor-default' : 'border-neutral-800 hover:border-red-700/50 cursor-pointer'
+                        }`}>
                         <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <span className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mr-3">
-                              RD {m.round_number} · {m.draw_segment.toUpperCase()}
-                            </span>
-                            <span className={`font-medium text-sm ${m.winner_id === m.player1_id ? 'text-[var(--sl-accent)]' : 'text-[var(--sl-text)]'}`}>
-                              {playerName(m.player1_id)}
-                            </span>
-                            <span className="text-[var(--sl-text-30)] mx-2">vs</span>
-                            <span className={`font-medium text-sm ${m.winner_id === m.player2_id ? 'text-[var(--sl-accent)]' : 'text-[var(--sl-text)]'}`}>
-                              {playerName(m.player2_id)}
-                            </span>
+                          <div className="flex-1 min-w-0 text-sm">
+                            <span className="text-[10px] font-bold tracking-widest text-neutral-600 mr-3">RD {m.round_number} · {m.draw_segment.toUpperCase()}</span>
+                            <span className={`font-medium ${m.winner_id === m.player1_id ? 'text-red-500' : 'text-neutral-200'}`}>{playerName(m.player1_id)}</span>
+                            <span className="text-neutral-600 mx-2">vs</span>
+                            <span className={`font-medium ${m.winner_id === m.player2_id ? 'text-red-500' : 'text-neutral-200'}`}>{playerName(m.player2_id)}</span>
                           </div>
-                          <div className="shrink-0 text-right">
-                            {isComplete ? (
-                              <span className="text-[10px] font-bold tracking-widest text-green-400">
-                                {m.score ? m.score : 'COMPLETE'}
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)]">ENTER SCORE →</span>
-                            )}
+                          <div className="shrink-0">
+                            {done
+                              ? <span className="text-[10px] font-bold tracking-widest text-green-400">{m.score || 'COMPLETE'}</span>
+                              : <span className="text-[10px] font-bold tracking-widest text-red-500">ENTER →</span>
+                            }
                           </div>
                         </div>
                       </button>
@@ -610,81 +538,56 @@ export default function TournamentDetailPage() {
           </div>
         )}
 
-        {/* ── SETTINGS ──────────────────────────────────────────────────────── */}
+        {/* ── SETTINGS ──────────────────────────────────────────────────── */}
         {activeTab === 'SETTINGS' && (
           <SettingsTab tournament={tournament} detail={detail ?? null} onUpdate={fetchAll} onDelete={deleteTournament} />
         )}
       </div>
 
-      {/* Score entry modal */}
+      {/* Score modal */}
       {scoreModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" onClick={() => setScoreModal(null)}>
-          <div
-            className="bg-[var(--sl-bg)] border border-[var(--sl-border)] rounded-2xl p-6 w-full max-w-sm shadow-2xl"
-            onClick={e => e.stopPropagation()}
-          >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={() => setScoreModal(null)}>
+          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-sm font-bold tracking-widest mb-1">ENTER SCORE</h3>
-            <p className="text-[var(--sl-text-40)] text-xs mb-5">Round {scoreModal.round_number} · {scoreModal.division} · {scoreModal.draw_segment}</p>
-
+            <p className="text-neutral-500 text-xs mb-5">Round {scoreModal.round_number} · {scoreModal.division} · {scoreModal.draw_segment}</p>
             <div className="mb-4">
-              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-2">Score (optional)</label>
-              <input
-                className="w-full bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-[var(--sl-accent)] transition"
-                placeholder="e.g. 11-8, 11-5, 11-9"
-                value={scoreInput}
-                onChange={e => setScoreInput(e.target.value)}
-              />
+              <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Score (optional)</label>
+              <input className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition"
+                placeholder="e.g. 11-8, 11-5, 11-9" value={scoreInput} onChange={e => setScoreInput(e.target.value)} />
             </div>
-
             <div className="mb-6">
-              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-3">Winner *</label>
+              <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-3">Winner *</label>
               <div className="grid grid-cols-2 gap-3">
-                {[
-                  { key: 'p1' as const, label: playerName(scoreModal.player1_id) },
-                  { key: 'p2' as const, label: playerName(scoreModal.player2_id) },
-                ].map(({ key, label }) => (
-                  <button
-                    key={key}
-                    onClick={() => setScoreWinner(key)}
+                {(['p1', 'p2'] as const).map(key => (
+                  <button key={key} onClick={() => setScoreWinner(key)}
                     className={`py-3 px-3 rounded-xl text-sm font-semibold border transition text-center ${
-                      scoreWinner === key
-                        ? 'border-[var(--sl-accent)] bg-[var(--sl-accent-10)] text-[var(--sl-accent)]'
-                        : 'border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-text-20)]'
-                    }`}
-                  >
-                    {label}
+                      scoreWinner === key ? 'border-red-600 bg-red-900/30 text-red-400' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
+                    }`}>
+                    {playerName(key === 'p1' ? scoreModal.player1_id : scoreModal.player2_id)}
                   </button>
                 ))}
               </div>
             </div>
-
             <div className="flex gap-3">
-              <button
-                onClick={() => setScoreModal(null)}
-                className="flex-1 text-xs font-bold tracking-widest text-[var(--sl-text-40)] border border-[var(--sl-border)] py-3 rounded-xl hover:border-[var(--sl-text-20)] transition"
-              >
+              <button onClick={() => setScoreModal(null)}
+                className="flex-1 text-xs font-bold tracking-widest text-neutral-400 border border-neutral-700 py-3 rounded-xl hover:border-neutral-500 transition">
                 CANCEL
               </button>
-              <button
-                onClick={saveScore}
-                disabled={!scoreWinner || savingScore}
-                className="flex-1 text-xs font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] py-3 rounded-xl hover:bg-[var(--sl-accent-hover)] disabled:opacity-40 transition"
-              >
+              <button onClick={saveScore} disabled={!scoreWinner || savingScore}
+                className="flex-1 text-xs font-bold tracking-widest bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white py-3 rounded-xl transition">
                 {savingScore ? 'SAVING...' : 'SAVE RESULT'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </main>
+    </div>
   )
 }
 
 // ─── Bracket View ─────────────────────────────────────────────────────────────
 
-function BracketView({
-  matches, maxRound, playerName,
-}: {
+function BracketView({ matches, maxRound, playerName }: {
   matches: Match[]
   maxRound: number
   playerName: (id: string | null) => string
@@ -693,46 +596,32 @@ function BracketView({
   for (let r = 1; r <= maxRound; r++) {
     rounds.push(matches.filter(m => m.round_number === r).sort((a, b) => a.match_index - b.match_index))
   }
-
-  const labelForRound = (r: number) => {
-    if (r === maxRound) return 'FINAL'
-    if (r === maxRound - 1) return 'SF'
-    if (r === maxRound - 2) return 'QF'
-    return `R${r}`
-  }
+  const label = (r: number) => r === maxRound ? 'FINAL' : r === maxRound - 1 ? 'SEMI' : r === maxRound - 2 ? 'QF' : `R${r}`
 
   return (
     <div className="flex gap-4 min-w-max pb-4">
       {rounds.map((roundMatches, ri) => {
-        const roundNum = ri + 1
+        const rn = ri + 1
         return (
-          <div key={roundNum} className="flex flex-col gap-3">
-            <div className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] text-center mb-1 px-2">
-              {labelForRound(roundNum)}
-            </div>
+          <div key={rn} className="flex flex-col">
+            <div className="text-[10px] font-bold tracking-widest text-neutral-600 text-center mb-2 px-2">{label(rn)}</div>
             <div className="flex flex-col justify-around" style={{ gap: `${Math.pow(2, ri) * 4}px` }}>
               {roundMatches.map(m => {
-                const p1Won = m.winner_id === m.player1_id
-                const p2Won = m.winner_id === m.player2_id
-                const complete = !!m.winner_id
+                const p1w = m.winner_id === m.player1_id
+                const p2w = m.winner_id === m.player2_id
                 return (
-                  <div
-                    key={m.id}
-                    className={`w-44 bg-[var(--sl-surface)] border rounded-xl overflow-hidden ${
-                      complete ? 'border-[var(--sl-accent-20)]' : 'border-[var(--sl-border)]'
-                    }`}
-                  >
-                    <div className={`flex items-center justify-between px-3 py-2 border-b border-[var(--sl-border)] ${p1Won ? 'bg-[var(--sl-accent-05)]' : ''}`}>
-                      <span className={`text-xs truncate max-w-[7rem] ${p1Won ? 'font-bold text-[var(--sl-accent)]' : 'text-[var(--sl-text-60)]'} ${!m.player1_id ? 'text-[var(--sl-text-20)] italic' : ''}`}>
+                  <div key={m.id} className={`w-44 bg-neutral-900 border rounded-xl overflow-hidden ${m.winner_id ? 'border-red-900/50' : 'border-neutral-800'}`}>
+                    <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p1w ? 'bg-red-900/20' : ''}`}>
+                      <span className={`text-xs truncate max-w-[7rem] ${p1w ? 'font-bold text-red-400' : !m.player1_id ? 'italic text-neutral-700' : 'text-neutral-400'}`}>
                         {playerName(m.player1_id)}
                       </span>
-                      {p1Won && <span className="text-[8px] text-[var(--sl-accent)] ml-1">✓</span>}
+                      {p1w && <span className="text-[8px] text-red-500 ml-1">✓</span>}
                     </div>
-                    <div className={`flex items-center justify-between px-3 py-2 ${p2Won ? 'bg-[var(--sl-accent-05)]' : ''}`}>
-                      <span className={`text-xs truncate max-w-[7rem] ${p2Won ? 'font-bold text-[var(--sl-accent)]' : 'text-[var(--sl-text-60)]'} ${!m.player2_id ? 'text-[var(--sl-text-20)] italic' : ''}`}>
+                    <div className={`flex items-center justify-between px-3 py-2 ${p2w ? 'bg-red-900/20' : ''}`}>
+                      <span className={`text-xs truncate max-w-[7rem] ${p2w ? 'font-bold text-red-400' : !m.player2_id ? 'italic text-neutral-700' : 'text-neutral-400'}`}>
                         {playerName(m.player2_id)}
                       </span>
-                      {p2Won && <span className="text-[8px] text-[var(--sl-accent)] ml-1">✓</span>}
+                      {p2w && <span className="text-[8px] text-red-500 ml-1">✓</span>}
                     </div>
                   </div>
                 )
@@ -747,9 +636,7 @@ function BracketView({
 
 // ─── Settings Tab ─────────────────────────────────────────────────────────────
 
-function SettingsTab({
-  tournament, detail, onUpdate, onDelete,
-}: {
+function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
   tournament: Tournament
   detail: TournamentDetail | null
   onUpdate: () => void
@@ -761,64 +648,50 @@ function SettingsTab({
   const [saved, setSaved] = useState(false)
 
   const DRAW_TYPES = ['Knockout + Plate', 'Round Robin → Knockout', 'Full Round Robin', 'Monrad']
+  const inputCls = 'w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition'
 
   async function save() {
     setSaving(true)
     const supabase = createClient()
     await supabase.from('tournaments').update({ name, draw_type: drawType }).eq('id', tournament.id)
-    setSaving(false)
-    setSaved(true)
+    setSaving(false); setSaved(true)
     setTimeout(() => setSaved(false), 2000)
     onUpdate()
   }
 
-  const inputClass = `w-full bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-xl px-4 py-3 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent)] transition`
-  const labelClass = `block text-[10px] font-bold tracking-widest text-[var(--sl-text-40)] uppercase mb-2`
-
   return (
     <div className="space-y-8 max-w-lg">
-      <div className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6 space-y-5">
-        <h2 className="text-xs font-bold tracking-widest text-[var(--sl-text-40)] uppercase">TOURNAMENT DETAILS</h2>
-
+      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-5">
+        <h2 className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase">Tournament Details</h2>
         <div>
-          <label className={labelClass}>Tournament Name</label>
-          <input className={inputClass} value={name} onChange={e => setName(e.target.value)} />
+          <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Name</label>
+          <input className={inputCls} value={name} onChange={e => setName(e.target.value)} />
         </div>
-
         <div>
-          <label className={labelClass}>Draw Type</label>
-          <select className={inputClass} value={drawType} onChange={e => setDrawType(e.target.value)}>
-            {DRAW_TYPES.map(dt => <option key={dt} value={dt}>{dt}</option>)}
+          <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Draw Format</label>
+          <select className={inputCls} value={drawType} onChange={e => setDrawType(e.target.value)}>
+            {DRAW_TYPES.map(d => <option key={d}>{d}</option>)}
           </select>
         </div>
-
         {detail && (
-          <div className="text-xs text-[var(--sl-text-40)] space-y-1 pt-2 border-t border-[var(--sl-border)]">
+          <div className="text-xs text-neutral-600 space-y-1 pt-2 border-t border-neutral-800">
             {detail.start_date && <p>Start: {new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
             {detail.clubs && <p>Venue: {detail.clubs.name}{detail.clubs.city ? `, ${detail.clubs.city}` : ''}</p>}
-            {detail.singles_fee != null && <p>Entry fee: ${Number(detail.singles_fee).toFixed(2)}</p>}
-            {detail.courts_available && <p>Courts: {detail.courts_available}</p>}
-            {detail.match_duration_minutes && <p>Match duration: {detail.match_duration_minutes} mins</p>}
-            {detail.min_rest_minutes && <p>Min rest: {detail.min_rest_minutes} mins</p>}
+            {detail.singles_entry_fee != null && <p>Singles fee: ${Number(detail.singles_entry_fee).toFixed(2)}</p>}
+            {detail.td_email && <p>TD email: {detail.td_email}</p>}
           </div>
         )}
-
-        <button
-          onClick={save}
-          disabled={saving}
-          className="w-full text-sm font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] py-3 rounded-xl hover:bg-[var(--sl-accent-hover)] disabled:opacity-50 transition"
-        >
+        <button onClick={save} disabled={saving}
+          className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold tracking-widest py-3 rounded-xl transition">
           {saved ? 'SAVED ✓' : saving ? 'SAVING...' : 'SAVE CHANGES'}
         </button>
       </div>
 
-      <div className="bg-[var(--sl-surface)] border border-red-500/20 rounded-2xl p-6">
-        <h2 className="text-xs font-bold tracking-widest text-red-400 uppercase mb-3">DANGER ZONE</h2>
-        <p className="text-[var(--sl-text-40)] text-xs mb-4">Deleting a tournament permanently removes all registrations, draws, and match data.</p>
-        <button
-          onClick={onDelete}
-          className="text-xs font-bold tracking-widest text-red-400 border border-red-500/30 px-4 py-2.5 rounded-xl hover:bg-red-500/10 transition"
-        >
+      <div className="bg-neutral-900 border border-red-900/30 rounded-2xl p-6">
+        <h2 className="text-[10px] font-bold tracking-widest text-red-500 uppercase mb-3">Danger Zone</h2>
+        <p className="text-neutral-500 text-xs mb-4">Permanently deletes all registrations, matches, and draw data.</p>
+        <button onClick={() => { if (confirm(`Delete "${tournament.name}"? This cannot be undone.`)) onDelete() }}
+          className="text-xs font-bold tracking-widest text-red-500 border border-red-900/50 px-4 py-2.5 rounded-xl hover:bg-red-900/20 transition">
           DELETE TOURNAMENT
         </button>
       </div>

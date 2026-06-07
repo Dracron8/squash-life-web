@@ -1,115 +1,115 @@
-import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import SiteLogo from '@/app/components/SiteLogo'
-import ThemeToggle from '@/app/components/ThemeToggle'
+import Link from 'next/link'
 
-const STATUS_LABELS: Record<string, string> = {
+type Tournament = {
+  id: string
+  name: string
+  status: string
+  draw_type: string
+  created_at: string
+  tournament_details: {
+    start_date: string | null
+    end_date: string | null
+    courts_available: number | null
+    clubs: { name: string; city: string | null } | null
+  }[]
+}
+
+const STATUS_LABEL: Record<string, string> = {
   setup_pending:     'SETUP',
   registration_open: 'OPEN',
   active:            'ACTIVE',
   completed:         'COMPLETED',
 }
 
-const STATUS_COLORS: Record<string, string> = {
-  setup_pending:     'bg-[var(--sl-surface-deep)] text-[var(--sl-text-40)] border-[var(--sl-border)]',
-  registration_open: 'bg-green-500/10 text-green-400 border-green-500/20',
-  active:            'bg-[var(--sl-accent-10)] text-[var(--sl-accent)] border-[var(--sl-accent-20)]',
-  completed:         'bg-[var(--sl-surface-deep)] text-[var(--sl-text-30)] border-[var(--sl-border)]',
+const STATUS_COLOR: Record<string, string> = {
+  setup_pending:     'bg-neutral-800 text-neutral-400 border-neutral-700',
+  registration_open: 'bg-green-900/40 text-green-400 border-green-700/40',
+  active:            'bg-red-900/40 text-red-400 border-red-700/40',
+  completed:         'bg-neutral-800 text-neutral-500 border-neutral-700',
 }
 
-export default async function TDHomePage() {
+export default async function TDDashboard() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return null
 
   const { data: tournaments } = await supabase
     .from('tournaments')
-    .select(`
-      id, name, status, draw_type,
-      tournament_details(start_date, end_date, singles_fee)
-    `)
-    .eq('td_id', user!.id)
+    .select('id, name, status, draw_type, created_at, tournament_details(start_date, end_date, courts_available, clubs(name, city))')
+    .eq('td_id', user.id)
     .order('created_at', { ascending: false })
 
-  return (
-    <main className="min-h-screen bg-[var(--sl-bg)] text-[var(--sl-text)]">
-      <header className="border-b border-[var(--sl-border)] px-6 py-4 flex items-center justify-between">
-        <Link href="/"><SiteLogo /></Link>
-        <div className="flex items-center gap-4">
-          <Link
-            href="/dashboard"
-            className="text-xs font-semibold tracking-widest text-[var(--sl-text-30)] hover:text-[var(--sl-text-60)] transition"
-          >
-            PLAYER VIEW
-          </Link>
-          <ThemeToggle />
-        </div>
-      </header>
+  const list = (tournaments ?? []) as unknown as Tournament[]
 
-      <section className="px-6 py-10 max-w-4xl mx-auto">
-        <div className="flex items-start justify-between mb-10">
-          <div>
-            <p className="text-[var(--sl-text-30)] text-xs tracking-widest uppercase mb-1">Tournament Director</p>
-            <h1 className="text-3xl font-bold tracking-wider">MY TOURNAMENTS</h1>
-          </div>
+  // Fetch registration counts per tournament
+  const ids = list.map(t => t.id)
+  let regCounts: Record<string, number> = {}
+  if (ids.length > 0) {
+    const { data: regs } = await supabase
+      .from('registrations')
+      .select('tournament_id')
+      .in('tournament_id', ids)
+    for (const r of regs ?? []) {
+      regCounts[r.tournament_id] = (regCounts[r.tournament_id] || 0) + 1
+    }
+  }
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-10">
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <p className="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-1">Tournament Director</p>
+          <h1 className="text-2xl font-bold tracking-wide">My Tournaments</h1>
+        </div>
+        <Link
+          href="/td/tournaments/new"
+          className="bg-red-700 hover:bg-red-600 text-white text-xs font-bold tracking-widest px-5 py-2.5 rounded-xl transition"
+        >
+          + CREATE TOURNAMENT
+        </Link>
+      </div>
+
+      {list.length === 0 ? (
+        <div className="border border-dashed border-neutral-800 rounded-2xl py-20 text-center">
+          <p className="text-neutral-500 text-sm mb-4">No tournaments yet.</p>
           <Link
             href="/td/tournaments/new"
-            className="text-sm font-bold tracking-widest text-[var(--sl-btn-text)] bg-[var(--sl-accent)] px-5 py-3 rounded-xl hover:bg-[var(--sl-accent-hover)] transition"
+            className="bg-red-700 hover:bg-red-600 text-white text-xs font-bold tracking-widest px-6 py-3 rounded-xl transition"
           >
-            + CREATE NEW
+            CREATE YOUR FIRST TOURNAMENT
           </Link>
         </div>
-
-        {(!tournaments || tournaments.length === 0) ? (
-          <div className="text-center py-20 border border-dashed border-[var(--sl-border)] rounded-2xl">
-            <p className="text-[var(--sl-text-30)] text-sm mb-6">No tournaments yet.</p>
-            <Link
-              href="/td/tournaments/new"
-              className="inline-block text-sm font-bold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-40)] px-6 py-3 rounded-xl hover:bg-[var(--sl-accent-10)] transition"
-            >
-              CREATE YOUR FIRST TOURNAMENT
-            </Link>
-          </div>
-        ) : (
-          <div className="grid gap-4">
-            {tournaments.map((t) => {
-              const detail = Array.isArray(t.tournament_details) ? t.tournament_details[0] : t.tournament_details
-              const statusKey = t.status ?? 'setup_pending'
-              return (
-                <Link
-                  key={t.id}
-                  href={`/td/tournaments/${t.id}`}
-                  className="block bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6 hover:border-[var(--sl-accent-30)] transition group"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className={`text-[10px] font-bold tracking-widest px-2 py-0.5 rounded border ${STATUS_COLORS[statusKey] ?? STATUS_COLORS.setup_pending}`}>
-                          {STATUS_LABELS[statusKey] ?? statusKey.toUpperCase()}
-                        </span>
-                        {t.draw_type && (
-                          <span className="text-[10px] tracking-widest text-[var(--sl-text-30)]">{t.draw_type}</span>
-                        )}
-                      </div>
-                      <h2 className="text-lg font-bold tracking-wide group-hover:text-[var(--sl-accent)] transition truncate">
-                        {t.name} Dashboard
-                      </h2>
-                      {detail && (
-                        <p className="text-[var(--sl-text-40)] text-xs mt-1">
-                          {detail.start_date
-                            ? new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })
-                            : 'Date TBD'}
-                          {detail.singles_fee ? ` · $${Number(detail.singles_fee).toFixed(0)} entry` : ''}
-                        </p>
-                      )}
-                    </div>
-                    <span className="shrink-0 text-[var(--sl-text-20)] group-hover:text-[var(--sl-accent)] transition text-lg">→</span>
+      ) : (
+        <div className="grid gap-3">
+          {list.map(t => {
+            const detail = t.tournament_details?.[0]
+            const count = regCounts[t.id] ?? 0
+            return (
+              <Link
+                key={t.id}
+                href={`/td/tournaments/${t.id}`}
+                className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 hover:border-neutral-600 transition block"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <h2 className="font-bold text-sm tracking-wide truncate">{t.name}</h2>
+                    <p className="text-neutral-500 text-xs mt-1">
+                      {detail?.clubs?.name ?? 'Venue TBD'}
+                      {detail?.clubs?.city ? ` · ${detail.clubs.city}` : ''}
+                      {detail?.start_date ? ` · ${new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                    </p>
+                    <p className="text-neutral-600 text-xs mt-1">{count} registered · {t.draw_type}</p>
                   </div>
-                </Link>
-              )
-            })}
-          </div>
-        )}
-      </section>
-    </main>
+                  <span className={`shrink-0 text-[10px] font-bold tracking-widest px-2.5 py-1 rounded border ${STATUS_COLOR[t.status] ?? STATUS_COLOR.setup_pending}`}>
+                    {STATUS_LABEL[t.status] ?? t.status.toUpperCase()}
+                  </span>
+                </div>
+              </Link>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
