@@ -634,15 +634,6 @@ export default function NewTournamentPage() {
           </div>
 
           <div className={sectionCls}>
-            <h2 className={labelCls}>Max Players</h2>
-            <div className="bg-neutral-800 rounded-xl px-5 py-4">
-              <p className="text-xs text-neutral-500 mb-1">Auto-calculated from schedule (set in Step 3)</p>
-              <p className="text-2xl font-bold text-red-500">{maxPlayers > 0 ? maxPlayers : '—'}</p>
-              <p className="text-xs text-neutral-600 mt-1">Fill in schedule details to see capacity</p>
-            </div>
-          </div>
-
-          <div className={sectionCls}>
             <h2 className={labelCls}>Prizes & Extras</h2>
             <Check value={form.has_referee} onChange={v => set('has_referee', v)} label="Referee required" />
             <Check value={form.has_trophy} onChange={v => set('has_trophy', v)} label="Trophy awarded" />
@@ -794,6 +785,15 @@ export default function NewTournamentPage() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+
+          <div className={sectionCls}>
+            <h2 className={labelCls}>Max Players</h2>
+            <div className="bg-neutral-800 rounded-xl px-5 py-4">
+              <p className="text-xs text-neutral-500 mb-1">Auto-calculated from your schedule above</p>
+              <p className="text-2xl font-bold text-red-500">{maxPlayers > 0 ? maxPlayers : '—'}</p>
+              <p className="text-xs text-neutral-600 mt-1">Fill in schedule details to see capacity</p>
             </div>
           </div>
         </div>
