@@ -21,6 +21,8 @@ type Tournament = {
 type TournamentDetail = {
   start_date: string | null
   end_date: string | null
+  daily_start_time: string | null
+  daily_end_time: string | null
   singles_fee: number | null
   max_players: number | null
   registration_deadline: string | null
@@ -127,7 +129,7 @@ export default function TournamentDetailPage() {
 
     const { data: t } = await supabase
       .from('tournaments')
-      .select(`id, name, status, draw_type, td_id, tournament_details(start_date, end_date, singles_fee, max_players, registration_deadline, courts_available, match_duration_minutes, min_rest_minutes, has_singles_draw, has_doubles_draw, clubs(name, address, city))`)
+      .select(`id, name, status, draw_type, td_id, tournament_details(start_date, end_date, daily_start_time, daily_end_time, singles_fee, max_players, registration_deadline, courts_available, match_duration_minutes, min_rest_minutes, has_singles_draw, has_doubles_draw, clubs(name, address, city))`)
       .eq('id', id)
       .single()
 
@@ -262,7 +264,44 @@ export default function TournamentDetailPage() {
     ? tournament.tournament_details[0]
     : tournament.tournament_details
 
+  // ── Capacity calculation ──────────────────────────────────────────────────
+  function calcCapacity() {
+    if (!detail) return null
+    const courts = detail.courts_available ?? 0
+    const matchMins = detail.match_duration_minutes ?? 40
+
+    // Parse daily hours
+    const parseTime = (t: string | null) => {
+      if (!t) return 0
+      const [h, m] = t.split(':').map(Number)
+      return h * 60 + (m || 0)
+    }
+    const startMins = parseTime(detail.daily_start_time)
+    const endMins   = parseTime(detail.daily_end_time)
+    const dailyMins = endMins - startMins
+    const slotsPerCourtPerDay = Math.floor(dailyMins / matchMins)
+
+    // Days
+    let days = 1
+    if (detail.start_date && detail.end_date) {
+      const ms = new Date(detail.end_date).getTime() - new Date(detail.start_date).getTime()
+      days = Math.max(1, Math.round(ms / 86400000) + 1)
+    }
+
+    const totalSlots = courts * slotsPerCourtPerDay * days
+    const numDivisions = Math.max(1, divs.length)
+    const slotsPerDiv  = Math.floor(totalSlots / numDivisions)
+
+    // KO+Plate: ~3N/2 - 2 matches for N players → N ≈ (slots + 2) / 1.5
+    const rawMax = Math.floor((slotsPerDiv + 2) / 1.5)
+    // Round down to nearest power of 2 for clean bracket
+    const comfortableMax = Math.pow(2, Math.floor(Math.log2(rawMax)))
+
+    return { courts, matchMins, dailyMins, slotsPerCourtPerDay, days, totalSlots, numDivisions, comfortableMax }
+  }
+
   const divs = divisions()
+  const capacity = calcCapacity()
   const divMatches = matches.filter(m => m.division === activeDivision)
   const mainMatches = divMatches.filter(m => m.draw_segment === 'main')
   const plateMatches = divMatches.filter(m => m.draw_segment === 'plate')
@@ -327,10 +366,32 @@ export default function TournamentDetailPage() {
         {/* ── REGISTRATIONS ─────────────────────────────────────────────────── */}
         {activeTab === 'REGISTRATIONS' && (
           <div>
+            {/* Capacity panel */}
+            {capacity && (
+              <div className="mb-6 bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl px-5 py-4">
+                <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] uppercase mb-3">Court Capacity</p>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--sl-text-60)]">
+                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.courts}</span> courts</span>
+                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.days}</span> day{capacity.days !== 1 ? 's' : ''}</span>
+                  <span><span className="font-bold text-[var(--sl-text)]">{Math.round(capacity.dailyMins / 60)}h</span>/day</span>
+                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.matchMins}min</span> matches</span>
+                  <span className="text-[var(--sl-border)]">→</span>
+                  <span><span className="font-bold text-[var(--sl-text)]">{capacity.totalSlots}</span> total match slots</span>
+                </div>
+                <div className="mt-3 pt-3 border-t border-[var(--sl-border)] flex flex-wrap gap-x-6 gap-y-1 text-xs">
+                  <span className="text-[var(--sl-text-40)]">
+                    Across <span className="font-bold text-[var(--sl-text)]">{capacity.numDivisions}</span> division{capacity.numDivisions !== 1 ? 's' : ''}
+                    {' '}→ comfortable max{' '}
+                    <span className="font-bold text-[var(--sl-accent)]">~{capacity.comfortableMax} players/division</span>
+                    {' '}({capacity.numDivisions * capacity.comfortableMax} total)
+                  </span>
+                </div>
+              </div>
+            )}
+
             <div className="flex items-center justify-between mb-6">
               <p className="text-[var(--sl-text-40)] text-sm">
                 {registrations.length} registered
-                {detail?.max_players ? ` / ${detail.max_players} max` : ''}
               </p>
               <div className="flex gap-3">
                 {tournament.status === 'setup_pending' && (
