@@ -12,18 +12,52 @@ type TournamentDetail = {
   end_date: string | null
   daily_start_time: string | null
   daily_end_time: string | null
+  morning_start: string | null
+  lunch_start: string | null
+  lunch_duration_mins: number | null
+  afternoon_start: string | null
+  has_dinner_break: boolean | null
+  dinner_start: string | null
+  dinner_duration_mins: number | null
+  has_evening_session: boolean | null
+  evening_start: string | null
   courts_available: number | null
   match_duration_minutes: number | null
   warm_up_minutes: number | null
   min_rest_hours: number | null
   max_matches_per_day: number | null
+  forfeit_minutes: number | null
   singles_entry_fee: number | null
   has_singles_draw: boolean | null
   has_doubles_draw: boolean | null
-  max_players: number | null
   registration_opens: string | null
   registration_deadline: string | null
+  has_waitlist: boolean | null
+  waitlist_spots: number | null
+  multi_division_allow_multiple: boolean | null
+  referee_required: boolean | null
+  has_trophy: boolean | null
+  prize_purse: number | null
+  has_player_gift: boolean | null
+  player_gift_desc: string | null
+  sponsor_name: string | null
+  has_social_event: boolean | null
+  social_event_time: string | null
+  social_event_desc: string | null
+  tournament_notes: string | null
   td_email: string | null
+  td_phone_comm: string | null
+  auto_notify_draw: boolean | null
+  auto_reminder_match: boolean | null
+  reminder_hours: number | null
+  welcome_message: string | null
+  check_in_required: boolean | null
+  check_in_open_mins: number | null
+  live_scoring: boolean | null
+  score_verification: boolean | null
+  print_score_sheets: boolean | null
+  court_assignment_display: string | null
+  max_players: number | null
   clubs: { name: string; city: string | null } | null
 }
 
@@ -153,7 +187,7 @@ export default function TournamentPage() {
 
     const { data: t } = await supabase
       .from('tournaments')
-      .select('id, name, status, draw_type, td_id, tournament_details(start_date, end_date, daily_start_time, daily_end_time, courts_available, match_duration_minutes, warm_up_minutes, min_rest_hours, max_matches_per_day, singles_entry_fee, has_singles_draw, has_doubles_draw, max_players, registration_opens, registration_deadline, td_email, clubs(name, city))')
+      .select('id, name, status, draw_type, td_id, tournament_details(start_date, end_date, daily_start_time, daily_end_time, morning_start, lunch_start, lunch_duration_mins, afternoon_start, has_dinner_break, dinner_start, dinner_duration_mins, has_evening_session, evening_start, courts_available, match_duration_minutes, warm_up_minutes, min_rest_hours, max_matches_per_day, forfeit_minutes, singles_entry_fee, has_singles_draw, has_doubles_draw, registration_opens, registration_deadline, has_waitlist, waitlist_spots, multi_division_allow_multiple, referee_required, has_trophy, prize_purse, has_player_gift, player_gift_desc, sponsor_name, has_social_event, social_event_time, social_event_desc, tournament_notes, td_email, td_phone_comm, auto_notify_draw, auto_reminder_match, reminder_hours, welcome_message, check_in_required, check_in_open_mins, live_scoring, score_verification, print_score_sheets, court_assignment_display, max_players, clubs(name, city))')
       .eq('id', id)
       .single()
 
@@ -590,6 +624,30 @@ export default function TournamentPage() {
   )
 }
 
+// ─── Shared UI helpers ────────────────────────────────────────────────────────
+
+function SettToggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <button type="button" onClick={() => onChange(!value)} className="flex items-center gap-3 text-sm text-neutral-300">
+      <div className={`w-10 h-5 rounded-full transition relative ${value ? 'bg-red-700' : 'bg-neutral-700'}`}>
+        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${value ? 'left-5' : 'left-0.5'}`} />
+      </div>
+      {label}
+    </button>
+  )
+}
+
+function SettCheck({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
+  return (
+    <label className="flex items-center gap-3 cursor-pointer text-sm text-neutral-300">
+      <div onClick={() => onChange(!value)} className={`w-5 h-5 rounded border-2 flex items-center justify-center transition flex-shrink-0 ${value ? 'bg-red-700 border-red-700' : 'border-neutral-600'}`}>
+        {value && <span className="text-white text-[10px] font-bold">✓</span>}
+      </div>
+      {label}
+    </label>
+  )
+}
+
 // ─── Bracket View ─────────────────────────────────────────────────────────────
 
 function BracketView({ matches, maxRound, playerName }: {
@@ -641,69 +699,430 @@ function BracketView({ matches, maxRound, playerName }: {
 
 // ─── Settings Tab ─────────────────────────────────────────────────────────────
 
+const DRAW_TYPES_LIST = ['Knockout + Plate', 'Round Robin → Knockout', 'Full Round Robin', 'Monrad']
+const FORFEIT_OPTS = ['10', '15', '20']
+const REMINDER_OPTS = ['1', '2', '3']
+const DISPLAY_OPTS = ['App only', 'App + whiteboard']
+
 function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
   tournament: Tournament
   detail: TournamentDetail | null
   onUpdate: () => void
   onDelete: () => void
 }) {
-  const [name, setName] = useState(tournament.name)
-  const [drawType, setDrawType] = useState(tournament.draw_type)
+  const iCls = 'w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition'
+  const lCls = 'block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2'
+  const sCls = 'bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4'
+  const hCls = 'text-sm font-bold tracking-wide text-neutral-300 uppercase'
+
+  const d = detail
+
+  const [f, setF] = useState({
+    name: tournament.name,
+    draw_type: tournament.draw_type,
+    courts_available: String(d?.courts_available ?? '4'),
+    has_singles_draw: d?.has_singles_draw ?? true,
+    has_doubles_draw: d?.has_doubles_draw ?? false,
+    singles_entry_fee: String(d?.singles_entry_fee ?? '0'),
+    registration_opens: d?.registration_opens?.slice(0, 10) ?? '',
+    registration_deadline: d?.registration_deadline?.slice(0, 10) ?? '',
+    has_waitlist: d?.has_waitlist ?? false,
+    waitlist_spots: String(d?.waitlist_spots ?? '10'),
+    multi_division_allow_multiple: d?.multi_division_allow_multiple ?? false,
+    has_referee: d?.referee_required ?? false,
+    has_trophy: d?.has_trophy ?? true,
+    prize_purse: String(d?.prize_purse ?? '0'),
+    has_player_gift: d?.has_player_gift ?? false,
+    player_gift_desc: d?.player_gift_desc ?? '',
+    sponsor_name: d?.sponsor_name ?? '',
+    has_social_event: d?.has_social_event ?? false,
+    social_event_time: d?.social_event_time?.slice(0, 5) ?? '',
+    social_event_desc: d?.social_event_desc ?? '',
+    tournament_notes: d?.tournament_notes ?? '',
+    start_date: d?.start_date?.slice(0, 10) ?? '',
+    end_date: d?.end_date?.slice(0, 10) ?? '',
+    morning_start: d?.morning_start?.slice(0, 5) ?? '08:00',
+    has_fixed_lunch: (d?.lunch_duration_mins ?? 0) > 0,
+    lunch_start: d?.lunch_start?.slice(0, 5) ?? '12:00',
+    lunch_duration_mins: String(d?.lunch_duration_mins ?? '0'),
+    afternoon_start: d?.afternoon_start?.slice(0, 5) ?? '13:00',
+    has_dinner_break: d?.has_dinner_break ?? false,
+    dinner_start: d?.dinner_start?.slice(0, 5) ?? '18:00',
+    dinner_duration_mins: String(d?.dinner_duration_mins ?? '60'),
+    has_evening_session: d?.has_evening_session ?? false,
+    evening_start: d?.evening_start?.slice(0, 5) ?? '19:00',
+    daily_end: d?.daily_end_time?.slice(0, 5) ?? '22:00',
+    match_duration_minutes: String(d?.match_duration_minutes ?? '40'),
+    warm_up_minutes: String(d?.warm_up_minutes ?? '10'),
+    min_rest_hours: String(d?.min_rest_hours ?? '3'),
+    max_matches_per_day: String(d?.max_matches_per_day ?? '2'),
+    forfeit_minutes: String(d?.forfeit_minutes ?? '15'),
+    td_email: d?.td_email ?? '',
+    td_phone_comm: d?.td_phone_comm ?? '',
+    auto_notify_draw: d?.auto_notify_draw ?? true,
+    auto_reminder_match: d?.auto_reminder_match ?? true,
+    reminder_hours: String(d?.reminder_hours ?? '2'),
+    welcome_message: d?.welcome_message ?? '',
+    check_in_required: d?.check_in_required ?? true,
+    check_in_open_mins: String(d?.check_in_open_mins ?? '60'),
+    live_scoring: d?.live_scoring ?? false,
+    score_verification: d?.score_verification ?? false,
+    print_score_sheets: d?.print_score_sheets ?? false,
+    court_assignment_display: d?.court_assignment_display ?? 'App only',
+  })
+
+  function set<K extends keyof typeof f>(k: K, v: typeof f[K]) {
+    setF(prev => ({ ...prev, [k]: v }))
+  }
+
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const [confirmDelete, setConfirmDelete] = useState(false)
-
-  const DRAW_TYPES = ['Knockout + Plate', 'Round Robin → Knockout', 'Full Round Robin', 'Monrad']
-  const inputCls = 'w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-base text-neutral-100 focus:outline-none focus:border-red-600 transition'
-  const labelCls = 'block text-sm font-bold tracking-wide text-neutral-400 mb-2'
 
   async function save() {
     setSaving(true)
+    setSaveError(null)
     const supabase = createClient()
-    await supabase.from('tournaments').update({ name, draw_type: drawType }).eq('id', tournament.id)
-    setSaving(false); setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+
+    const { error: tErr } = await supabase.from('tournaments')
+      .update({ name: f.name.trim(), draw_type: f.draw_type })
+      .eq('id', tournament.id)
+    if (tErr) { setSaveError(tErr.message); setSaving(false); return }
+
+    const { error: dErr } = await supabase.from('tournament_details')
+      .update({
+        courts_available: Number(f.courts_available) || 1,
+        format: f.draw_type,
+        daily_start_time: f.morning_start || null,
+        daily_end_time: f.daily_end || null,
+        start_date: f.start_date || null,
+        end_date: f.end_date || null,
+        morning_start: f.morning_start || null,
+        lunch_start: f.has_fixed_lunch ? f.lunch_start || null : null,
+        lunch_duration_mins: f.has_fixed_lunch ? Number(f.lunch_duration_mins) || 0 : 0,
+        afternoon_start: f.afternoon_start || null,
+        has_dinner_break: f.has_dinner_break,
+        dinner_start: f.has_dinner_break ? f.dinner_start || null : null,
+        dinner_duration_mins: f.has_dinner_break ? Number(f.dinner_duration_mins) || 0 : 0,
+        has_evening_session: f.has_evening_session,
+        evening_start: f.has_evening_session ? f.evening_start || null : null,
+        match_duration_minutes: Number(f.match_duration_minutes) || 40,
+        warm_up_minutes: Number(f.warm_up_minutes) || 10,
+        min_rest_hours: Number(f.min_rest_hours) || 3,
+        min_rest_minutes: (Number(f.min_rest_hours) || 3) * 60,
+        max_matches_per_day: Number(f.max_matches_per_day) || 2,
+        forfeit_minutes: Number(f.forfeit_minutes) || 15,
+        has_singles_draw: f.has_singles_draw,
+        has_doubles_draw: f.has_doubles_draw,
+        singles_entry_fee: Number(f.singles_entry_fee) || 0,
+        registration_opens: f.registration_opens || null,
+        registration_deadline: f.registration_deadline || null,
+        has_waitlist: f.has_waitlist,
+        waitlist_spots: f.has_waitlist ? Number(f.waitlist_spots) || 0 : 0,
+        multi_division_allow_multiple: f.multi_division_allow_multiple,
+        multi_division: f.multi_division_allow_multiple,
+        referee_required: f.has_referee,
+        has_trophy: f.has_trophy,
+        prize_purse: Number(f.prize_purse) || 0,
+        has_player_gift: f.has_player_gift,
+        player_gift_desc: f.has_player_gift ? f.player_gift_desc.trim() : '',
+        sponsor_name: f.sponsor_name.trim(),
+        has_social_event: f.has_social_event,
+        social_event_time: f.has_social_event ? f.social_event_time || null : null,
+        social_event_desc: f.has_social_event ? f.social_event_desc.trim() : '',
+        tournament_notes: f.tournament_notes.trim(),
+        td_email: f.td_email.trim(),
+        td_phone_comm: f.td_phone_comm.trim(),
+        auto_notify_draw: f.auto_notify_draw,
+        auto_reminder_match: f.auto_reminder_match,
+        reminder_hours: Number(f.reminder_hours) || 2,
+        welcome_message: f.welcome_message.trim(),
+        check_in_required: f.check_in_required,
+        check_in_open_mins: f.check_in_required ? Number(f.check_in_open_mins) || 60 : null,
+        live_scoring: f.live_scoring,
+        score_verification: f.score_verification,
+        print_score_sheets: f.print_score_sheets,
+        court_assignment_display: f.court_assignment_display,
+      })
+      .eq('tournament_id', tournament.id)
+    if (dErr) { setSaveError(dErr.message); setSaving(false); return }
+
+    setSaving(false)
+    setSaved(true)
+    setTimeout(() => setSaved(false), 2500)
     onUpdate()
   }
 
   return (
-    <div className="space-y-8 max-w-lg">
-      <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-5">
-        <h2 className="text-base font-bold tracking-wide text-neutral-300 uppercase">Tournament Details</h2>
+    <div className="space-y-5 max-w-2xl">
+      {saveError && (
+        <div className="bg-red-900/20 border border-red-700/40 text-red-400 text-sm rounded-xl px-4 py-3 flex justify-between">
+          {saveError}
+          <button onClick={() => setSaveError(null)} className="ml-3 text-red-600">✕</button>
+        </div>
+      )}
+
+      {/* ── BASICS ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Tournament Basics</h2>
         <div>
-          <label className={labelCls}>Tournament Name</label>
-          <input className={inputCls} value={name} onChange={e => setName(e.target.value)} />
+          <label className={lCls}>Tournament Name</label>
+          <input className={iCls} value={f.name} onChange={e => set('name', e.target.value)} />
         </div>
         <div>
-          <label className={labelCls}>Draw Format</label>
-          <select className={inputCls} value={drawType} onChange={e => setDrawType(e.target.value)}>
-            {DRAW_TYPES.map(d => <option key={d}>{d}</option>)}
+          <label className={lCls}>Draw Format</label>
+          <select className={iCls} value={f.draw_type} onChange={e => set('draw_type', e.target.value)}>
+            {DRAW_TYPES_LIST.map(dt => <option key={dt}>{dt}</option>)}
           </select>
         </div>
-        {detail && (
-          <div className="text-sm text-neutral-500 space-y-2 pt-3 border-t border-neutral-800">
-            {detail.start_date && (
-              <p><span className="text-neutral-400 font-medium">Start:</span> {new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
-            )}
-            {detail.clubs && (
-              <p><span className="text-neutral-400 font-medium">Venue:</span> {detail.clubs.name}{detail.clubs.city ? `, ${detail.clubs.city}` : ''}</p>
-            )}
-            {detail.singles_entry_fee != null && (
-              <p><span className="text-neutral-400 font-medium">Singles fee:</span> ${Number(detail.singles_entry_fee).toFixed(2)}</p>
-            )}
-            {detail.td_email && (
-              <p><span className="text-neutral-400 font-medium">TD email:</span> {detail.td_email}</p>
-            )}
-          </div>
+        {d?.clubs && (
+          <p className="text-xs text-neutral-600">Venue: {d.clubs.name}{d.clubs.city ? `, ${d.clubs.city}` : ''}</p>
         )}
-        <button onClick={save} disabled={saving}
-          className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-base font-bold tracking-wide py-3 rounded-xl transition">
-          {saved ? 'SAVED ✓' : saving ? 'SAVING...' : 'SAVE CHANGES'}
-        </button>
+        <div>
+          <label className={lCls}>Courts Available</label>
+          <input type="number" min="1" className={iCls} value={f.courts_available} onChange={e => set('courts_available', e.target.value)} />
+        </div>
       </div>
 
+      {/* ── REGISTRATION & DRAWS ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Registration & Draws</h2>
+        <SettToggle value={f.has_singles_draw} onChange={v => set('has_singles_draw', v)} label="Singles draw" />
+        <SettToggle value={f.has_doubles_draw} onChange={v => set('has_doubles_draw', v)} label="Doubles draw" />
+        <div>
+          <label className={lCls}>Singles Entry Fee ($)</label>
+          <input type="number" min="0" step="0.01" className={iCls} value={f.singles_entry_fee} onChange={e => set('singles_entry_fee', e.target.value)} />
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={lCls}>Registration Opens</label>
+            <input type="date" className={iCls} value={f.registration_opens} onChange={e => set('registration_opens', e.target.value)} />
+          </div>
+          <div>
+            <label className={lCls}>Registration Deadline</label>
+            <input type="date" className={iCls} value={f.registration_deadline} onChange={e => set('registration_deadline', e.target.value)} />
+          </div>
+        </div>
+        <SettToggle value={f.has_waitlist} onChange={v => set('has_waitlist', v)} label="Enable waitlist" />
+        {f.has_waitlist && (
+          <div>
+            <label className={lCls}>Waitlist Spots</label>
+            <input type="number" min="1" className={iCls} value={f.waitlist_spots} onChange={e => set('waitlist_spots', e.target.value)} />
+          </div>
+        )}
+        <SettToggle value={f.multi_division_allow_multiple} onChange={v => set('multi_division_allow_multiple', v)} label="Allow multiple division entry" />
+      </div>
+
+      {/* ── PRIZES & OFFICIALS ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Prizes & Officials</h2>
+        <SettCheck value={f.has_referee} onChange={v => set('has_referee', v)} label="Referee required" />
+        <SettCheck value={f.has_trophy} onChange={v => set('has_trophy', v)} label="Trophy awarded" />
+        <div>
+          <label className={lCls}>Cash Prize Purse ($0 = none)</label>
+          <input type="number" min="0" className={iCls} value={f.prize_purse} onChange={e => set('prize_purse', e.target.value)} />
+        </div>
+        <SettToggle value={f.has_player_gift} onChange={v => set('has_player_gift', v)} label="Player gift" />
+        {f.has_player_gift && (
+          <div>
+            <label className={lCls}>Gift Description</label>
+            <input className={iCls} value={f.player_gift_desc} onChange={e => set('player_gift_desc', e.target.value)} />
+          </div>
+        )}
+        <div>
+          <label className={lCls}>Sponsor Name (optional)</label>
+          <input className={iCls} value={f.sponsor_name} onChange={e => set('sponsor_name', e.target.value)} />
+        </div>
+      </div>
+
+      {/* ── POST-TOURNAMENT ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Post-Tournament</h2>
+        <SettToggle value={f.has_social_event} onChange={v => set('has_social_event', v)} label="Social event" />
+        {f.has_social_event && (
+          <>
+            <div>
+              <label className={lCls}>Social Event Time</label>
+              <input type="time" className={iCls} value={f.social_event_time} onChange={e => set('social_event_time', e.target.value)} />
+            </div>
+            <div>
+              <label className={lCls}>Description</label>
+              <input className={iCls} value={f.social_event_desc} onChange={e => set('social_event_desc', e.target.value)} />
+            </div>
+          </>
+        )}
+        <div>
+          <label className={lCls}>Tournament Notes</label>
+          <textarea rows={3} className={`${iCls} resize-none`} value={f.tournament_notes} onChange={e => set('tournament_notes', e.target.value)} />
+        </div>
+      </div>
+
+      {/* ── SCHEDULE ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Schedule</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={lCls}>Start Date</label>
+            <input type="date" className={iCls} value={f.start_date} onChange={e => set('start_date', e.target.value)} />
+          </div>
+          <div>
+            <label className={lCls}>End Date</label>
+            <input type="date" className={iCls} value={f.end_date} onChange={e => set('end_date', e.target.value)} />
+          </div>
+        </div>
+        <div>
+          <label className={lCls}>Morning Session Start</label>
+          <input type="time" className={iCls} value={f.morning_start} onChange={e => set('morning_start', e.target.value)} />
+        </div>
+        <SettToggle value={f.has_fixed_lunch} onChange={v => { set('has_fixed_lunch', v); if (!v) set('lunch_duration_mins', '0') }} label="Fixed Lunch Break" />
+        {f.has_fixed_lunch ? (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lCls}>Lunch Break Start</label>
+              <input type="time" className={iCls} value={f.lunch_start} onChange={e => set('lunch_start', e.target.value)} />
+            </div>
+            <div>
+              <label className={lCls}>Lunch Duration (mins)</label>
+              <input type="number" min="15" step="15" className={iCls} value={f.lunch_duration_mins} onChange={e => set('lunch_duration_mins', e.target.value)} />
+            </div>
+          </div>
+        ) : (
+          <p className="text-xs text-neutral-500">Rolling Lunch — no fixed break</p>
+        )}
+        <div>
+          <label className={lCls}>Afternoon Session Start</label>
+          <input type="time" className={iCls} value={f.afternoon_start} onChange={e => set('afternoon_start', e.target.value)} />
+        </div>
+        <SettToggle value={f.has_dinner_break} onChange={v => set('has_dinner_break', v)} label="Dinner break" />
+        {f.has_dinner_break && (
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className={lCls}>Dinner Break Start</label>
+              <input type="time" className={iCls} value={f.dinner_start} onChange={e => set('dinner_start', e.target.value)} />
+            </div>
+            <div>
+              <label className={lCls}>Dinner Duration (mins)</label>
+              <input type="number" min="0" step="15" className={iCls} value={f.dinner_duration_mins} onChange={e => set('dinner_duration_mins', e.target.value)} />
+            </div>
+          </div>
+        )}
+        <SettToggle value={f.has_evening_session} onChange={v => set('has_evening_session', v)} label="Evening session" />
+        {f.has_evening_session && (
+          <div>
+            <label className={lCls}>Evening Session Start</label>
+            <input type="time" className={iCls} value={f.evening_start} onChange={e => set('evening_start', e.target.value)} />
+          </div>
+        )}
+        <div>
+          <label className={lCls}>End of Play</label>
+          <input type="time" className={iCls} value={f.daily_end} onChange={e => set('daily_end', e.target.value)} />
+        </div>
+      </div>
+
+      {/* ── MATCH TIMING ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Match Timing</h2>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={lCls}>Match Duration (mins)</label>
+            <input type="number" min="10" step="5" className={iCls} value={f.match_duration_minutes} onChange={e => set('match_duration_minutes', e.target.value)} />
+          </div>
+          <div>
+            <label className={lCls}>Warm-up (mins)</label>
+            <input type="number" min="0" step="5" className={iCls} value={f.warm_up_minutes} onChange={e => set('warm_up_minutes', e.target.value)} />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className={lCls}>Min Rest Between Matches (hrs)</label>
+            <input type="number" min="1" step="0.5" className={iCls} value={f.min_rest_hours} onChange={e => set('min_rest_hours', e.target.value)} />
+          </div>
+          <div>
+            <label className={lCls}>Max Matches / Day</label>
+            <input type="number" min="1" max="5" className={iCls} value={f.max_matches_per_day} onChange={e => set('max_matches_per_day', e.target.value)} />
+          </div>
+        </div>
+        <div>
+          <label className={lCls}>Forfeit Rule (no-show)</label>
+          <div className="flex gap-3">
+            {FORFEIT_OPTS.map(o => (
+              <button key={o} type="button" onClick={() => set('forfeit_minutes', o)}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.forfeit_minutes === o ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                {o} min
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── COMMUNICATIONS ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Communications</h2>
+        <div>
+          <label className={lCls}>TD Email</label>
+          <input type="email" className={iCls} value={f.td_email} onChange={e => set('td_email', e.target.value)} />
+        </div>
+        <div>
+          <label className={lCls}>TD Phone</label>
+          <input type="tel" className={iCls} value={f.td_phone_comm} onChange={e => set('td_phone_comm', e.target.value)} />
+        </div>
+        <SettToggle value={f.auto_notify_draw} onChange={v => set('auto_notify_draw', v)} label="Notify players when draw is published" />
+        <SettToggle value={f.auto_reminder_match} onChange={v => set('auto_reminder_match', v)} label="Send match reminders" />
+        {f.auto_reminder_match && (
+          <div>
+            <label className={lCls}>Reminder hours before match</label>
+            <div className="flex gap-3">
+              {REMINDER_OPTS.map(o => (
+                <button key={o} type="button" onClick={() => set('reminder_hours', o)}
+                  className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.reminder_hours === o ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                  {o}h
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div>
+          <label className={lCls}>Welcome Message</label>
+          <textarea rows={3} className={`${iCls} resize-none`} value={f.welcome_message} onChange={e => set('welcome_message', e.target.value)} />
+        </div>
+      </div>
+
+      {/* ── TOURNAMENT DAY ── */}
+      <div className={sCls}>
+        <h2 className={hCls}>Tournament Day</h2>
+        <SettToggle value={f.check_in_required} onChange={v => set('check_in_required', v)} label="Check-in required" />
+        {f.check_in_required && (
+          <div>
+            <label className={lCls}>Check-in opens (mins before first match)</label>
+            <input type="number" min="15" step="15" className={iCls} value={f.check_in_open_mins} onChange={e => set('check_in_open_mins', e.target.value)} />
+          </div>
+        )}
+        <SettToggle value={f.live_scoring} onChange={v => set('live_scoring', v)} label="Live scoring" />
+        <SettToggle value={f.score_verification} onChange={v => set('score_verification', v)} label="Score verification" />
+        <SettToggle value={f.print_score_sheets} onChange={v => set('print_score_sheets', v)} label="Print score sheets" />
+        <div>
+          <label className={lCls}>Court Assignment Display</label>
+          <div className="flex gap-3">
+            {DISPLAY_OPTS.map(o => (
+              <button key={o} type="button" onClick={() => set('court_assignment_display', o)}
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.court_assignment_display === o ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* ── SAVE BUTTON ── */}
+      <button onClick={save} disabled={saving}
+        className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-base font-bold tracking-wide py-3.5 rounded-xl transition">
+        {saved ? 'SAVED ✓' : saving ? 'SAVING...' : 'SAVE CHANGES'}
+      </button>
+
+      {/* ── DANGER ZONE ── */}
       <div className="bg-neutral-900 border border-red-900/30 rounded-2xl p-6">
-        <h2 className="text-base font-bold tracking-wide text-red-500 uppercase mb-2">Danger Zone</h2>
+        <h2 className="text-sm font-bold tracking-wide text-red-500 uppercase mb-2">Danger Zone</h2>
         <p className="text-sm text-neutral-500 mb-5">Permanently deletes all registrations, matches, and draw data. This cannot be undone.</p>
         {!confirmDelete ? (
           <button onClick={() => setConfirmDelete(true)}

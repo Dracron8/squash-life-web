@@ -216,7 +216,14 @@ function Check({ value, onChange, label }: { value: boolean; onChange: (v: boole
 export default function NewTournamentPage() {
   const router = useRouter()
   const [step, setStep] = useState(1)
-  const [form, setForm] = useState<Form>(INITIAL)
+  const [form, setForm] = useState<Form>(() => {
+    if (typeof window === 'undefined') return INITIAL
+    try {
+      const saved = localStorage.getItem('td_wizard_form')
+      if (saved) return { ...INITIAL, ...JSON.parse(saved) }
+    } catch {}
+    return INITIAL
+  })
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
@@ -239,6 +246,10 @@ export default function NewTournamentPage() {
     document.addEventListener('mousedown', handler)
     return () => document.removeEventListener('mousedown', handler)
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem('td_wizard_form', JSON.stringify(form))
+  }, [form])
 
   const maxPlayers = useMemo(() => calcCapacity(form), [form])
 
@@ -421,6 +432,7 @@ export default function NewTournamentPage() {
         })
 
       if (dErr) throw new Error(dErr.message)
+      localStorage.removeItem('td_wizard_form')
       router.push(`/td/tournaments/${tournament.id}`)
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Something went wrong.')
