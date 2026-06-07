@@ -261,7 +261,12 @@ export default function TournamentPage() {
 
   async function deleteTournament() {
     const supabase = createClient()
-    await supabase.from('tournaments').delete().eq('id', id)
+    // Delete child records first to satisfy FK constraints
+    await supabase.from('matches').delete().eq('tournament_id', id)
+    await supabase.from('registrations').delete().eq('tournament_id', id)
+    await supabase.from('tournament_details').delete().eq('tournament_id', id)
+    const { error: delErr } = await supabase.from('tournaments').delete().eq('id', id)
+    if (delErr) { setError(delErr.message); return }
     router.push('/td')
   }
 
@@ -646,9 +651,11 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
   const [drawType, setDrawType] = useState(tournament.draw_type)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const DRAW_TYPES = ['Knockout + Plate', 'Round Robin → Knockout', 'Full Round Robin', 'Monrad']
-  const inputCls = 'w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition'
+  const inputCls = 'w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-base text-neutral-100 focus:outline-none focus:border-red-600 transition'
+  const labelCls = 'block text-sm font-bold tracking-wide text-neutral-400 mb-2'
 
   async function save() {
     setSaving(true)
@@ -662,38 +669,62 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
   return (
     <div className="space-y-8 max-w-lg">
       <div className="bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-5">
-        <h2 className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase">Tournament Details</h2>
+        <h2 className="text-base font-bold tracking-wide text-neutral-300 uppercase">Tournament Details</h2>
         <div>
-          <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Name</label>
+          <label className={labelCls}>Tournament Name</label>
           <input className={inputCls} value={name} onChange={e => setName(e.target.value)} />
         </div>
         <div>
-          <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Draw Format</label>
+          <label className={labelCls}>Draw Format</label>
           <select className={inputCls} value={drawType} onChange={e => setDrawType(e.target.value)}>
             {DRAW_TYPES.map(d => <option key={d}>{d}</option>)}
           </select>
         </div>
         {detail && (
-          <div className="text-xs text-neutral-600 space-y-1 pt-2 border-t border-neutral-800">
-            {detail.start_date && <p>Start: {new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</p>}
-            {detail.clubs && <p>Venue: {detail.clubs.name}{detail.clubs.city ? `, ${detail.clubs.city}` : ''}</p>}
-            {detail.singles_entry_fee != null && <p>Singles fee: ${Number(detail.singles_entry_fee).toFixed(2)}</p>}
-            {detail.td_email && <p>TD email: {detail.td_email}</p>}
+          <div className="text-sm text-neutral-500 space-y-2 pt-3 border-t border-neutral-800">
+            {detail.start_date && (
+              <p><span className="text-neutral-400 font-medium">Start:</span> {new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
+            )}
+            {detail.clubs && (
+              <p><span className="text-neutral-400 font-medium">Venue:</span> {detail.clubs.name}{detail.clubs.city ? `, ${detail.clubs.city}` : ''}</p>
+            )}
+            {detail.singles_entry_fee != null && (
+              <p><span className="text-neutral-400 font-medium">Singles fee:</span> ${Number(detail.singles_entry_fee).toFixed(2)}</p>
+            )}
+            {detail.td_email && (
+              <p><span className="text-neutral-400 font-medium">TD email:</span> {detail.td_email}</p>
+            )}
           </div>
         )}
         <button onClick={save} disabled={saving}
-          className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold tracking-widest py-3 rounded-xl transition">
+          className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-base font-bold tracking-wide py-3 rounded-xl transition">
           {saved ? 'SAVED ✓' : saving ? 'SAVING...' : 'SAVE CHANGES'}
         </button>
       </div>
 
       <div className="bg-neutral-900 border border-red-900/30 rounded-2xl p-6">
-        <h2 className="text-[10px] font-bold tracking-widest text-red-500 uppercase mb-3">Danger Zone</h2>
-        <p className="text-neutral-500 text-xs mb-4">Permanently deletes all registrations, matches, and draw data.</p>
-        <button onClick={() => { if (confirm(`Delete "${tournament.name}"? This cannot be undone.`)) onDelete() }}
-          className="text-xs font-bold tracking-widest text-red-500 border border-red-900/50 px-4 py-2.5 rounded-xl hover:bg-red-900/20 transition">
-          DELETE TOURNAMENT
-        </button>
+        <h2 className="text-base font-bold tracking-wide text-red-500 uppercase mb-2">Danger Zone</h2>
+        <p className="text-sm text-neutral-500 mb-5">Permanently deletes all registrations, matches, and draw data. This cannot be undone.</p>
+        {!confirmDelete ? (
+          <button onClick={() => setConfirmDelete(true)}
+            className="text-sm font-bold tracking-wide text-red-500 border border-red-900/50 px-5 py-3 rounded-xl hover:bg-red-900/20 transition">
+            DELETE TOURNAMENT
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-sm font-bold text-red-400">Delete &ldquo;{tournament.name}&rdquo;? All data will be lost.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(false)}
+                className="flex-1 text-sm font-bold border border-neutral-700 text-neutral-400 py-3 rounded-xl hover:border-neutral-500 transition">
+                CANCEL
+              </button>
+              <button onClick={onDelete}
+                className="flex-1 text-sm font-bold bg-red-700 hover:bg-red-600 text-white py-3 rounded-xl transition">
+                YES, DELETE
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
