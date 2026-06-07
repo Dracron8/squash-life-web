@@ -53,6 +53,7 @@ type Form = {
   start_date: string
   end_date: string
   morning_start: string
+  has_fixed_lunch: boolean
   lunch_start: string
   lunch_duration_mins: string
   afternoon_start: string
@@ -100,7 +101,7 @@ const INITIAL: Form = {
   social_event_time: '', social_event_desc: '', tournament_notes: '',
 
   start_date: '', end_date: '',
-  morning_start: '08:00', lunch_start: '12:00', lunch_duration_mins: '60',
+  morning_start: '08:00', has_fixed_lunch: false, lunch_start: '12:00', lunch_duration_mins: '0',
   afternoon_start: '13:00',
   has_dinner_break: false, dinner_start: '18:00', dinner_duration_mins: '60',
   has_evening_session: false, evening_start: '19:00', daily_end: '22:00',
@@ -703,25 +704,35 @@ export default function NewTournamentPage() {
 
           <div className={sectionCls}>
             <h2 className={labelCls}>Daily Schedule</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Morning Session Start *</label>
-                <input type="time" className={inputCls} value={form.morning_start} onChange={e => set('morning_start', e.target.value)} />
-              </div>
-              <div>
-                <label className={labelCls}>Lunch Break Start</label>
-                <input type="time" className={inputCls} value={form.lunch_start} onChange={e => set('lunch_start', e.target.value)} />
-              </div>
+            <div>
+              <label className={labelCls}>Morning Session Start *</label>
+              <input type="time" className={inputCls} value={form.morning_start} onChange={e => set('morning_start', e.target.value)} />
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Lunch Duration (mins)</label>
-                <input type="number" min="0" step="15" className={inputCls} value={form.lunch_duration_mins} onChange={e => set('lunch_duration_mins', e.target.value)} />
+            <Toggle
+              value={form.has_fixed_lunch}
+              onChange={v => {
+                set('has_fixed_lunch', v)
+                if (!v) set('lunch_duration_mins', '0')
+              }}
+              label="Fixed Lunch Break"
+            />
+            {form.has_fixed_lunch ? (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className={labelCls}>Lunch Break Start</label>
+                  <input type="time" className={inputCls} value={form.lunch_start} onChange={e => set('lunch_start', e.target.value)} />
+                </div>
+                <div>
+                  <label className={labelCls}>Lunch Duration (mins)</label>
+                  <input type="number" min="15" step="15" className={inputCls} value={form.lunch_duration_mins} onChange={e => set('lunch_duration_mins', e.target.value)} />
+                </div>
               </div>
-              <div>
-                <label className={labelCls}>Afternoon Session Start</label>
-                <input type="time" className={inputCls} value={form.afternoon_start} onChange={e => set('afternoon_start', e.target.value)} />
-              </div>
+            ) : (
+              <p className="text-xs text-neutral-500">Rolling Lunch — players eat between matches, no fixed break deducted</p>
+            )}
+            <div>
+              <label className={labelCls}>Afternoon Session Start</label>
+              <input type="time" className={inputCls} value={form.afternoon_start} onChange={e => set('afternoon_start', e.target.value)} />
             </div>
 
             <Toggle value={form.has_dinner_break} onChange={v => set('has_dinner_break', v)} label="Dinner break" />
@@ -924,7 +935,7 @@ export default function NewTournamentPage() {
             { title: 'Schedule', rows: [
               ['Dates', form.start_date && form.end_date ? `${form.start_date} → ${form.end_date}` : '—'],
               ['Morning Start', form.morning_start || '—'],
-              ['Lunch', `${form.lunch_start} (${form.lunch_duration_mins} min)`],
+              ['Lunch', form.has_fixed_lunch ? `${form.lunch_start} (${form.lunch_duration_mins} min fixed)` : 'Rolling lunch'],
               ['Afternoon Start', form.afternoon_start || '—'],
               ['Dinner Break', form.has_dinner_break ? `${form.dinner_start} (${form.dinner_duration_mins} min)` : 'No'],
               ['Evening Session', form.has_evening_session ? form.evening_start : 'No'],
