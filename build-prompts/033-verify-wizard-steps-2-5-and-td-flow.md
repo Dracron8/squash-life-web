@@ -95,7 +95,10 @@ npx tsc --noEmit
 - Build green.
 - Report: "033 PASS" + any screenshots or specific deltas vs mock/prompts.
 
-Last updated: now (post 004-012 implementations + 033 polish for per-day previews + extra SUMMARY rows)
+Last updated: post-commit 2d1bf51 (feat(td): 5-step wizard + basic scheduler v1 + 033)
+
+Commit 2d1bf51 captured the core TD implementation + all historical prompts up to 033.
+Run this audit on your local dev server (npm run dev -- --hostname 0.0.0.0) with a TD-role Supabase user.
 ```
 
 Now run a quick ls or just note the file.
