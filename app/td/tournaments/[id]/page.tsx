@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
+import { reconstructDaySchedules, generateBasicSchedule, type ScheduleSlot } from '@/lib/td/flutterParity'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -28,6 +29,7 @@ type TournamentDetail = {
   max_matches_per_day: number | null
   forfeit_minutes: number | null
   singles_entry_fee: number | null
+  doubles_entry_fee: number | null
   has_singles_draw: boolean | null
   has_doubles_draw: boolean | null
   registration_opens: string | null
@@ -58,6 +60,7 @@ type TournamentDetail = {
   print_score_sheets: boolean | null
   court_assignment_display: string | null
   max_players: number | null
+  schedule_slots: string | null  // JSON string for 009 persistence
   clubs: { name: string; city: string | null } | null
 }
 
@@ -96,7 +99,7 @@ type Match = {
   next_match_id: string | null
 }
 
-const TABS = ['REGISTRATIONS', 'DRAW', 'SCORE ENTRY', 'SETTINGS'] as const
+const TABS = ['OVERVIEW', 'SCHEDULE', 'REGISTRATIONS', 'DRAW', 'SCORE ENTRY', 'SETTINGS'] as const
 type Tab = typeof TABS[number]
 
 const STATUS_LABEL: Record<string, string> = {
@@ -164,6 +167,7 @@ function calcCapacityFromDetail(d: TournamentDetail): number {
 export default function TournamentPage() {
   const router = useRouter()
   const params = useParams()
+  const searchParams = useSearchParams()
   const id = params.id as string
 
   const [loading, setLoading] = useState(true)
@@ -171,7 +175,7 @@ export default function TournamentPage() {
   const [registrations, setRegistrations] = useState<Registration[]>([])
   const [matches, setMatches] = useState<Match[]>([])
   const [playerMap, setPlayerMap] = useState<Record<string, string>>({})
-  const [activeTab, setActiveTab] = useState<Tab>('REGISTRATIONS')
+  const [activeTab, setActiveTab] = useState<Tab>('OVERVIEW')
   const [activeDivision, setActiveDivision] = useState('')
   const [generatingDraw, setGeneratingDraw] = useState(false)
   const [scoreModal, setScoreModal] = useState<Match | null>(null)
@@ -180,6 +184,12 @@ export default function TournamentPage() {
   const [savingScore, setSavingScore] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // For 008 SCHEDULE tab
+  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([])
+  const [savingSchedule, setSavingSchedule] = useState(false)
+  const [showCreatedBanner, setShowCreatedBanner] = useState(false)
+  const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
+
   const fetchAll = useCallback(async () => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -187,12 +197,21 @@ export default function TournamentPage() {
 
     const { data: t } = await supabase
       .from('tournaments')
-      .select('id, name, status, draw_type, td_id, tournament_details(start_date, end_date, daily_start_time, daily_end_time, morning_start, lunch_start, lunch_duration_mins, afternoon_start, has_dinner_break, dinner_start, dinner_duration_mins, has_evening_session, evening_start, courts_available, match_duration_minutes, warm_up_minutes, min_rest_hours, max_matches_per_day, forfeit_minutes, singles_entry_fee, has_singles_draw, has_doubles_draw, registration_opens, registration_deadline, has_waitlist, waitlist_spots, multi_division_allow_multiple, referee_required, has_trophy, prize_purse, has_player_gift, player_gift_desc, sponsor_name, has_social_event, social_event_time, social_event_desc, tournament_notes, td_email, td_phone_comm, auto_notify_draw, auto_reminder_match, reminder_hours, welcome_message, check_in_required, check_in_open_mins, live_scoring, score_verification, print_score_sheets, court_assignment_display, max_players, clubs(name, city))')
+      .select('id, name, status, draw_type, td_id, tournament_details(start_date, end_date, daily_start_time, daily_end_time, morning_start, lunch_start, lunch_duration_mins, afternoon_start, has_dinner_break, dinner_start, dinner_duration_mins, has_evening_session, evening_start, courts_available, match_duration_minutes, warm_up_minutes, min_rest_hours, max_matches_per_day, forfeit_minutes, singles_entry_fee, doubles_entry_fee, has_singles_draw, has_doubles_draw, registration_opens, registration_deadline, has_waitlist, waitlist_spots, multi_division_allow_multiple, referee_required, has_trophy, prize_purse, has_player_gift, player_gift_desc, sponsor_name, has_social_event, social_event_time, social_event_desc, tournament_notes, td_email, td_phone_comm, auto_notify_draw, auto_reminder_match, reminder_hours, welcome_message, check_in_required, check_in_open_mins, live_scoring, score_verification, print_score_sheets, court_assignment_display, max_players, schedule_slots, clubs(name, city))')
       .eq('id', id)
       .single()
 
     if (!t || (t as unknown as Tournament).td_id !== user.id) { router.push('/td'); return }
     setTournament(t as unknown as Tournament)
+
+    // 009: load persisted schedule_slots if present (JSON in tournament_details)
+    const loadedDetail = Array.isArray(t.tournament_details) ? t.tournament_details[0] : t.tournament_details
+    if (loadedDetail?.schedule_slots) {
+      try {
+        const parsed = JSON.parse(loadedDetail.schedule_slots)
+        if (Array.isArray(parsed)) setScheduleSlots(parsed)
+      } catch (e) { /* ignore bad JSON */ }
+    }
 
     const { data: regs } = await supabase
       .from('registrations')
@@ -232,6 +251,18 @@ export default function TournamentPage() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
+  // Show success banner and clean URL after creation / update redirect
+  useEffect(() => {
+    if (searchParams.get('created') === '1') {
+      setShowCreatedBanner(true)
+      router.replace(`/td/tournaments/${id}`)
+    }
+    if (searchParams.get('updated') === '1') {
+      setShowUpdatedBanner(true)
+      router.replace(`/td/tournaments/${id}`)
+    }
+  }, [searchParams, id, router])
+
   function divisions() {
     const s = new Set([
       ...registrations.map(r => r.division).filter(Boolean),
@@ -270,6 +301,42 @@ export default function TournamentPage() {
     if (rpcErr) { setError(rpcErr.message); setGeneratingDraw(false); return }
     await fetchAll()
     setGeneratingDraw(false)
+  }
+
+  // 008: basic scheduling
+  async function generateSchedule() {
+    if (!detail) return
+    setSavingSchedule(true)
+    setError(null)
+    const slots = generateBasicSchedule(detail, registrations)
+    setScheduleSlots(slots)
+    // 009: persist to tournament_details.schedule_slots as JSON
+    try {
+      const supabase = createClient()
+      await supabase
+        .from('tournament_details')
+        .update({ schedule_slots: JSON.stringify(slots) })
+        .eq('tournament_id', id)
+    } catch (e: any) {
+      setError('Failed to persist schedule: ' + (e?.message || e))
+    }
+    setSavingSchedule(false)
+  }
+
+  function editSlot(index: number, field: 'player1_id' | 'player2_id', value: string | null) {
+    setScheduleSlots(prev => {
+      const next = [...prev]
+      next[index] = { ...next[index], [field]: value }
+      return next
+    })
+  }
+
+  function clearSlot(index: number) {
+    setScheduleSlots(prev => {
+      const next = [...prev]
+      next[index] = { ...next[index], player1_id: null, player2_id: null }
+      return next
+    })
   }
 
   async function saveScore() {
@@ -342,9 +409,17 @@ export default function TournamentPage() {
               </p>
             )}
           </div>
-          <span className={`shrink-0 text-[10px] font-bold tracking-widest px-3 py-1.5 rounded border ${STATUS_COLOR[tournament.status] ?? STATUS_COLOR.setup_pending}`}>
-            {STATUS_LABEL[tournament.status] ?? tournament.status.toUpperCase()}
-          </span>
+          <div className="flex flex-col items-end gap-2 shrink-0">
+            <span className={`text-[10px] font-bold tracking-widest px-3 py-1.5 rounded border ${STATUS_COLOR[tournament.status] ?? STATUS_COLOR.setup_pending}`}>
+              {STATUS_LABEL[tournament.status] ?? tournament.status.toUpperCase()}
+            </span>
+            <Link
+              href={`/td/tournaments/new?edit=${tournament.id}`}
+              className="text-[10px] font-bold tracking-widest text-red-400 border border-red-800 hover:bg-red-900/30 px-3 py-1 rounded-lg transition"
+            >
+              EDIT SETUP
+            </Link>
+          </div>
         </div>
 
         {/* Tabs */}
@@ -361,10 +436,148 @@ export default function TournamentPage() {
       </div>
 
       <div className="px-6 py-8 max-w-5xl mx-auto">
+        {showCreatedBanner && (
+          <div className="mb-6 bg-green-900/20 border border-green-700/40 text-green-400 text-sm rounded-xl px-4 py-3 flex justify-between items-center">
+            <span>Tournament created! Review your settings below, then open registration when ready.</span>
+            <button onClick={() => setShowCreatedBanner(false)} className="ml-3 text-green-600 hover:text-green-400 flex-shrink-0">✕</button>
+          </div>
+        )}
+        {showUpdatedBanner && (
+          <div className="mb-6 bg-green-900/20 border border-green-700/40 text-green-400 text-sm rounded-xl px-4 py-3 flex justify-between items-center">
+            <span>Tournament updated! Changes are reflected below.</span>
+            <button onClick={() => setShowUpdatedBanner(false)} className="ml-3 text-green-600 hover:text-green-400 flex-shrink-0">✕</button>
+          </div>
+        )}
         {error && (
           <div className="mb-6 bg-red-900/20 border border-red-700/40 text-red-400 text-sm rounded-xl px-4 py-3 flex justify-between">
             {error}
             <button onClick={() => setError(null)} className="ml-3 text-red-600">✕</button>
+          </div>
+        )}
+
+        {/* ── OVERVIEW ──────────────────────────────────────────────────── */}
+        {activeTab === 'OVERVIEW' && (
+          <OverviewTab tournament={tournament} detail={detail ?? null} registrationCount={registrations.length} />
+        )}
+
+        {/* ── SCHEDULE (008) ─────────────────────────────────────────────── */}
+        {activeTab === 'SCHEDULE' && (
+          <div>
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <p className="text-neutral-500 text-sm">Proposed court/time slots based on wizard schedule rules</p>
+                {scheduleSlots.length > 0 && (
+                  <p className="text-xs text-neutral-600 mt-1">{scheduleSlots.length} slots generated</p>
+                )}
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={generateSchedule}
+                  disabled={savingSchedule || !detail}
+                  className="bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl transition"
+                >
+                  {savingSchedule ? 'GENERATING...' : 'GENERATE / REGENERATE SCHEDULE'}
+                </button>
+                {scheduleSlots.length > 0 && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const supabase = createClient()
+                        await supabase
+                          .from('tournament_details')
+                          .update({ schedule_slots: JSON.stringify(scheduleSlots) })
+                          .eq('tournament_id', id)
+                        alert('Schedule persisted to DB')
+                      } catch (e: any) {
+                        setError('Persist failed: ' + (e?.message || ''))
+                      }
+                    }}
+                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 transition"
+                  >
+                    SAVE SCHEDULE TO DB
+                  </button>
+                )}
+                {scheduleSlots.length > 0 && matches.length === 0 && (
+                  <button
+                    onClick={async () => {
+                      setSavingSchedule(true)
+                      const supabase = createClient()
+                      const inserts = scheduleSlots.map((s, i) => ({
+                        tournament_id: id,
+                        round_number: 1,
+                        draw_segment: 'main',
+                        division: registrations[0]?.division || 'Open',
+                        player1_id: s.player1_id || null,
+                        player2_id: s.player2_id || null,
+                        match_index: i,
+                      }))
+                      const { error: insErr } = await supabase.from('matches').insert(inserts)
+                      if (insErr) setError(insErr.message)
+                      else await fetchAll()
+                      setSavingSchedule(false)
+                    }}
+                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 transition"
+                  >
+                    CREATE MATCHES FROM SLOTS
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {scheduleSlots.length === 0 ? (
+              <div className="border border-dashed border-neutral-800 rounded-2xl py-16 text-center">
+                <p className="text-neutral-500 text-sm">No schedule generated yet.</p>
+                <p className="text-neutral-700 text-xs mt-2">Click generate to create slots from the tournament's day schedule, courts, and rules.</p>
+              </div>
+            ) : (
+              <div className="space-y-8">
+                {Object.entries(
+                  scheduleSlots.reduce((acc: any, slot) => {
+                    (acc[slot.dayLabel] ||= []).push(slot)
+                    return acc
+                  }, {})
+                ).map(([dayLabel, daySlots]: [string, any]) => (
+                  <div key={dayLabel}>
+                    <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-3">{dayLabel.toUpperCase()}</p>
+                    <div className="grid gap-2">
+                      {daySlots.map((slot: ScheduleSlot, idx: number) => {
+                        const globalIdx = scheduleSlots.indexOf(slot)
+                        return (
+                          <div key={globalIdx} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex items-center gap-4 text-sm">
+                            <div className="w-16 text-[10px] font-bold tracking-widest text-neutral-500">Court {slot.court}</div>
+                            <div className="font-mono text-xs text-neutral-400">{slot.start_time} – {slot.end_time}</div>
+                            <div className="flex-1 flex gap-3 items-center">
+                              <select
+                                className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs"
+                                value={slot.player1_id || ''}
+                                onChange={e => editSlot(globalIdx, 'player1_id', e.target.value || null)}
+                              >
+                                <option value="">TBD</option>
+                                {registrations.map(r => (
+                                  <option key={r.id} value={r.user_id}>{r.first_name} {r.last_name}</option>
+                                ))}
+                              </select>
+                              <span className="text-neutral-600">vs</span>
+                              <select
+                                className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs"
+                                value={slot.player2_id || ''}
+                                onChange={e => editSlot(globalIdx, 'player2_id', e.target.value || null)}
+                              >
+                                <option value="">TBD</option>
+                                {registrations.map(r => (
+                                  <option key={r.id} value={r.user_id}>{r.first_name} {r.last_name}</option>
+                                ))}
+                              </select>
+                            </div>
+                            <button onClick={() => clearSlot(globalIdx)} className="text-xs text-neutral-500 hover:text-red-400">clear</button>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -624,6 +837,210 @@ export default function TournamentPage() {
   )
 }
 
+// ─── Overview Tab ─────────────────────────────────────────────────────────────
+
+function OvRow({ label, value }: { label: string; value: string | number | boolean | null | undefined }) {
+  if (value === null || value === undefined || value === '') return null
+  const display = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)
+  return (
+    <div className="flex justify-between items-baseline gap-4 py-1.5 border-b border-neutral-800 last:border-0">
+      <span className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase flex-shrink-0">{label}</span>
+      <span className="text-sm text-neutral-200 text-right">{display}</span>
+    </div>
+  )
+}
+
+function fmtDate(d: string | null | undefined) {
+  if (!d) return null
+  return new Date(d + 'T00:00:00').toLocaleDateString('en-CA', { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
+function fmtTime(t: string | null | undefined) {
+  if (!t) return null
+  // HH:MM:SS → HH:MM
+  return t.slice(0, 5)
+}
+
+function parseTime(t: string | null | undefined): number {
+  if (!t) return 0
+  const [h, m] = t.split(':').map(Number)
+  return (h || 0) * 60 + (m || 0)
+}
+
+function OverviewTab({
+  tournament,
+  detail,
+  registrationCount,
+}: {
+  tournament: Tournament
+  detail: TournamentDetail | null
+  registrationCount: number
+}) {
+  const sCls = 'bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-1'
+  const hCls = 'text-[11px] font-bold tracking-widest text-red-500 uppercase mb-3'
+
+  const days =
+    detail?.start_date && detail?.end_date
+      ? Math.max(1, Math.round((new Date(detail.end_date).getTime() - new Date(detail.start_date).getTime()) / 86400000) + 1)
+      : null
+
+  const dateRange =
+    detail?.start_date && detail?.end_date
+      ? detail.start_date === detail.end_date
+        ? fmtDate(detail.start_date)
+        : `${fmtDate(detail.start_date)} – ${fmtDate(detail.end_date)}`
+      : null
+
+  const dailyWindow =
+    detail?.daily_start_time && detail?.daily_end_time
+      ? `${fmtTime(detail.daily_start_time)} – ${fmtTime(detail.daily_end_time)}`
+      : null
+
+  const lunchDisplay =
+    detail?.lunch_start
+      ? `Fixed at ${fmtTime(detail.lunch_start)}, ${detail.lunch_duration_mins ?? 60} min`
+      : 'Rolling (no fixed break)'
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-3xl">
+      {tournament.status !== 'setup_pending' && (
+        <div className="col-span-full mb-1 text-[10px] text-amber-400 bg-amber-900/10 border border-amber-800/40 rounded px-3 py-1">
+          Note: Tournament is no longer in setup_pending. Further edits to core schedule/setup may be limited in future flows.
+        </div>
+      )}
+
+      {/* Tournament */}
+      <div className={sCls}>
+        <h2 className={hCls}>Tournament</h2>
+        <OvRow label="Name" value={tournament.name} />
+        <OvRow label="Format" value={tournament.draw_type} />
+        <OvRow label="Dates" value={dateRange} />
+        <OvRow label="Duration" value={days ? `${days} day${days > 1 ? 's' : ''}` : null} />
+        <OvRow label="Registered" value={registrationCount > 0 ? `${registrationCount} players` : 'None yet'} />
+        {detail?.registration_opens && (
+          <OvRow label="Reg. Opens" value={fmtDate(detail.registration_opens)} />
+        )}
+        {detail?.registration_deadline && (
+          <OvRow label="Reg. Deadline" value={fmtDate(detail.registration_deadline)} />
+        )}
+      </div>
+
+      {/* Venue */}
+      <div className={sCls}>
+        <h2 className={hCls}>Venue</h2>
+        <OvRow label="Club" value={detail?.clubs?.name} />
+        <OvRow label="City" value={detail?.clubs?.city} />
+        <OvRow label="Courts" value={detail?.courts_available} />
+        {detail?.max_players && <OvRow label="Est. Capacity" value={`${detail.max_players} players`} />}
+      </div>
+
+      {/* Schedule
+          The schedule data comes from the day_schedules (per-day label/start/end) the user defined
+          in wizard Step 3 (SCHEDULE). These are collapsed into daily_start/end + lunch rules by
+          buildTournamentDetailsPayload at save time. We reconstruct explicit blocks here for visibility. */}
+      <div className={sCls}>
+        <h2 className={hCls}>Schedule</h2>
+        <OvRow label="Daily Window" value={dailyWindow} />
+        <OvRow label="Match Duration" value={detail?.match_duration_minutes ? `${detail.match_duration_minutes} min` : null} />
+        <OvRow label="Warm-up" value={detail?.warm_up_minutes ? `${detail.warm_up_minutes} min` : null} />
+        <OvRow label="Min Rest" value={detail?.min_rest_hours ? `${detail.min_rest_hours} hrs` : null} />
+        <OvRow label="Max / Day" value={detail?.max_matches_per_day ? `${detail.max_matches_per_day} matches` : null} />
+        <OvRow label="Lunch" value={lunchDisplay} />
+        <OvRow label="Forfeit" value={detail?.forfeit_minutes ? `${detail.forfeit_minutes} min` : null} />
+
+        {/* Explicit per-day blocks (reconstructed from stored daily window + dates; see 007 prompt) */}
+        {(() => {
+          const blocks = reconstructDaySchedules(
+            detail?.start_date,
+            detail?.end_date,
+            detail?.daily_start_time || detail?.morning_start,
+            detail?.daily_end_time,
+          )
+          if (blocks.length === 0) return null
+          const courts = detail?.courts_available ?? 0
+          const matchMins = detail?.match_duration_minutes ?? 40
+          return (
+            <div className="pt-3 mt-2 border-t border-neutral-800">
+              <span className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase">Defined Schedule Blocks</span>
+              <div className="mt-2 space-y-1">
+                {blocks.map((b, i) => {
+                  // rough per-day slot estimate (simplified, mirrors capacity logic without lunch subtract for display)
+                  const slot = matchMins
+                  const mins = Math.max(0, (b.end_time ? parseTime(b.end_time) : 0) - (b.start_time ? parseTime(b.start_time) : 0))
+                  const perDaySlots = courts > 0 && slot > 0 ? Math.floor(mins / slot) * courts : 0
+                  return (
+                    <div key={i} className="flex justify-between text-sm text-neutral-300">
+                      <span className="text-neutral-500">{b.label}</span>
+                      <span className="font-mono text-neutral-400">
+                        {b.start_time} – {b.end_time} <span className="text-neutral-600">· ~{perDaySlots} slots</span>
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-neutral-600 mt-1">Blocks derived from stored daily window (raw per-day variation not persisted separately).</p>
+            </div>
+          )
+        })()}
+      </div>
+
+      {/* Entry & Fees */}
+      <div className={sCls}>
+        <h2 className={hCls}>Entry & Fees</h2>
+        <OvRow label="Singles Draw" value={detail?.has_singles_draw} />
+        {detail?.has_singles_draw && (
+          <OvRow label="Singles Fee" value={detail.singles_entry_fee ? `$${detail.singles_entry_fee}` : 'Free'} />
+        )}
+        <OvRow label="Doubles Draw" value={detail?.has_doubles_draw} />
+        {detail?.has_doubles_draw && (
+          <OvRow label="Doubles Fee" value={detail.doubles_entry_fee ? `$${detail.doubles_entry_fee}` : 'Free'} />
+        )}
+        <OvRow label="Waitlist" value={detail?.has_waitlist ? `Yes — ${detail.waitlist_spots ?? 0} spots` : 'No'} />
+        <OvRow label="Multi-division" value={detail?.multi_division_allow_multiple} />
+        {Number(detail?.prize_purse) > 0 && (
+          <OvRow label="Prize Purse" value={`$${detail!.prize_purse}`} />
+        )}
+        <OvRow label="Trophy" value={detail?.has_trophy} />
+        <OvRow label="Referee" value={detail?.referee_required} />
+      </div>
+
+      {/* Day-of */}
+      <div className={sCls}>
+        <h2 className={hCls}>Day-of Logistics</h2>
+        <OvRow
+          label="Check-in"
+          value={
+            detail?.check_in_required
+              ? `Required — opens ${detail.check_in_open_mins ?? 60} min before`
+              : 'Not required'
+          }
+        />
+        <OvRow label="Live Scoring" value={detail?.live_scoring} />
+        <OvRow label="Score Verification" value={detail?.score_verification} />
+        <OvRow label="Print Score Sheets" value={detail?.print_score_sheets} />
+        <OvRow label="Court Display" value={detail?.court_assignment_display} />
+      </div>
+
+      {/* Comms */}
+      <div className={sCls}>
+        <h2 className={hCls}>Communications</h2>
+        <OvRow label="TD Email" value={detail?.td_email} />
+        <OvRow label="TD Phone" value={detail?.td_phone_comm} />
+        <OvRow label="Auto-notify Draw" value={detail?.auto_notify_draw} />
+        <OvRow label="Match Reminders" value={detail?.auto_reminder_match ? `Yes — ${detail.reminder_hours ?? 2} hrs before` : 'Off'} />
+        {detail?.sponsor_name && <OvRow label="Sponsor" value={detail.sponsor_name} />}
+        {detail?.tournament_notes && (
+          <div className="pt-2">
+            <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-1">Notes</p>
+            <p className="text-xs text-neutral-400 whitespace-pre-line">{detail.tournament_notes}</p>
+          </div>
+        )}
+      </div>
+
+    </div>
+  )
+}
+
 // ─── Shared UI helpers ────────────────────────────────────────────────────────
 
 function SettToggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
@@ -800,11 +1217,11 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
         end_date: f.end_date || null,
         morning_start: f.morning_start || null,
         lunch_start: f.has_fixed_lunch ? f.lunch_start || null : null,
-        lunch_duration_mins: f.has_fixed_lunch ? Number(f.lunch_duration_mins) || 0 : 0,
+        lunch_duration_mins: f.has_fixed_lunch ? (Number(f.lunch_duration_mins) || 60) : 60,
         afternoon_start: f.afternoon_start || null,
         has_dinner_break: f.has_dinner_break,
         dinner_start: f.has_dinner_break ? f.dinner_start || null : null,
-        dinner_duration_mins: f.has_dinner_break ? Number(f.dinner_duration_mins) || 0 : 0,
+        dinner_duration_mins: f.has_dinner_break ? (Number(f.dinner_duration_mins) || 60) : 60,
         has_evening_session: f.has_evening_session,
         evening_start: f.has_evening_session ? f.evening_start || null : null,
         match_duration_minutes: Number(f.match_duration_minutes) || 40,

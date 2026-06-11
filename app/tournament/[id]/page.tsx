@@ -140,13 +140,14 @@ export default async function TournamentPage({ params }: Props) {
   const { data: reg } = user
     ? await supabase
         .from('registrations')
-        .select('id')
+        .select('id, payment_status')
         .eq('tournament_id', id)
         .eq('user_id', user.id)
         .maybeSingle()
     : { data: null }
 
   const isRegistered = !!reg
+  const paymentStatus = reg?.payment_status as string | undefined
 
   const statusLabel = tournament.status === 'registration_open' ? 'OPEN' : tournament.status.replace(/_/g, ' ').toUpperCase()
   const isOpen = tournament.status === 'registration_open'
@@ -395,10 +396,30 @@ export default async function TournamentPage({ params }: Props) {
 
                 {/* CTA button */}
                 {isRegistered ? (
-                  <div className="w-full text-center py-3.5 rounded-xl text-sm font-bold tracking-[0.14em] uppercase"
-                    style={{ background: 'rgba(192,57,43,0.1)', border: '1.5px solid rgba(192,57,43,0.3)', color: '#C0392B' }}>
-                    ✓ REGISTERED
-                  </div>
+                  <>
+                    <div className="w-full text-center py-3.5 rounded-xl text-sm font-bold tracking-[0.14em] uppercase"
+                      style={{ background: 'rgba(192,57,43,0.1)', border: '1.5px solid rgba(192,57,43,0.3)', color: '#C0392B' }}>
+                      ✓ REGISTERED
+                    </div>
+                    {paymentStatus === 'waitlist' && (
+                      <div className="flex items-center gap-2 text-xs font-medium" style={{ color: '#dc2626' }}>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#dc2626', flexShrink: 0 }} />
+                        Waitlist — payment required to secure your spot
+                      </div>
+                    )}
+                    {paymentStatus === 'deposit_paid' && (
+                      <div className="flex items-center gap-2 text-xs font-medium" style={{ color: '#ca8a04' }}>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#ca8a04', flexShrink: 0 }} />
+                        Deposit Paid — balance due at the door
+                      </div>
+                    )}
+                    {paymentStatus === 'fully_paid' && (
+                      <div className="flex items-center gap-2 text-xs font-medium" style={{ color: '#16a34a' }}>
+                        <span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: '#16a34a', flexShrink: 0 }} />
+                        Fully Paid — you&apos;re all set
+                      </div>
+                    )}
+                  </>
                 ) : isOpen ? (
                   user ? (
                     <Link

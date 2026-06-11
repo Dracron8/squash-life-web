@@ -15,6 +15,14 @@ type Tournament = {
   }[]
 }
 
+function fmtListDate(start: string | null, end: string | null): string | null {
+  if (!start) return null
+  const s = new Date(start).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+  if (!end || end === start) return s
+  const e = new Date(end).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })
+  return `${s} – ${e}`
+}
+
 const STATUS_LABEL: Record<string, string> = {
   setup_pending:     'SETUP',
   registration_open: 'OPEN',
@@ -44,7 +52,7 @@ export default async function TDDashboard() {
 
   // Fetch registration counts per tournament
   const ids = list.map(t => t.id)
-  let regCounts: Record<string, number> = {}
+  const regCounts: Record<string, number> = {}
   if (ids.length > 0) {
     const { data: regs } = await supabase
       .from('registrations')
@@ -85,27 +93,39 @@ export default async function TDDashboard() {
           {list.map(t => {
             const detail = t.tournament_details?.[0]
             const count = regCounts[t.id] ?? 0
+            const dateStr = fmtListDate(detail?.start_date, detail?.end_date)
             return (
-              <Link
+              <div
                 key={t.id}
-                href={`/td/tournaments/${t.id}`}
-                className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 hover:border-neutral-600 transition block"
+                className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 hover:border-neutral-600 transition"
               >
                 <div className="flex items-start justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h2 className="font-bold text-sm tracking-wide truncate">{t.name}</h2>
+                  <Link
+                    href={`/td/tournaments/${t.id}`}
+                    className="flex-1 min-w-0 block"
+                  >
+                    <h2 className="font-bold text-sm tracking-wide truncate hover:text-red-400 transition">{t.name}</h2>
                     <p className="text-neutral-500 text-xs mt-1">
                       {detail?.clubs?.name ?? 'Venue TBD'}
                       {detail?.clubs?.city ? ` · ${detail.clubs.city}` : ''}
-                      {detail?.start_date ? ` · ${new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}
+                      {dateStr ? ` · ${dateStr}` : ''}
                     </p>
                     <p className="text-neutral-600 text-xs mt-1">{count} registered · {t.draw_type}</p>
+                  </Link>
+                  <div className="flex flex-col items-end gap-2 shrink-0">
+                    <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded border ${STATUS_COLOR[t.status] ?? STATUS_COLOR.setup_pending}`}>
+                      {STATUS_LABEL[t.status] ?? t.status.toUpperCase()}
+                    </span>
+                    <Link
+                      href={`/td/tournaments/new?edit=${t.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="text-[10px] font-bold tracking-widest text-red-400 border border-red-800 hover:bg-red-900/30 px-3 py-1 rounded-lg transition"
+                    >
+                      EDIT SETUP
+                    </Link>
                   </div>
-                  <span className={`shrink-0 text-[10px] font-bold tracking-widest px-2.5 py-1 rounded border ${STATUS_COLOR[t.status] ?? STATUS_COLOR.setup_pending}`}>
-                    {STATUS_LABEL[t.status] ?? t.status.toUpperCase()}
-                  </span>
                 </div>
-              </Link>
+              </div>
             )
           })}
         </div>
