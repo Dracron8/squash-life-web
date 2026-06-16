@@ -109,25 +109,25 @@ const STATUS_LABEL: Record<string, string> = {
   setup_pending: 'SETUP', registration_open: 'OPEN', active: 'ACTIVE', completed: 'COMPLETED',
 }
 const STATUS_COLOR: Record<string, string> = {
-  setup_pending: 'bg-neutral-800 text-neutral-400 border-neutral-700',
+  setup_pending: 'bg-[var(--sl-surface)] text-[var(--sl-text-50)] border-[var(--sl-border)]',
   registration_open: 'bg-green-900/40 text-green-400 border-green-700/40',
-  active: 'bg-red-900/40 text-red-400 border-red-700/40',
-  completed: 'bg-neutral-800 text-neutral-500 border-neutral-700',
+  active: 'bg-[var(--sl-accent-10)] text-[var(--sl-accent)] border-[var(--sl-accent-30)]',
+  completed: 'bg-[var(--sl-surface)] text-[var(--sl-text-30)] border-[var(--sl-border)]',
 }
 const PAY_COLOR: Record<string, string> = {
   fully_paid: 'text-green-400', deposit_paid: 'text-yellow-400',
-  waitlist: 'text-neutral-500', pending: 'text-neutral-500', paid: 'text-green-400',
+  waitlist: 'text-[var(--sl-text-50)]', pending: 'text-[var(--sl-text-50)]', paid: 'text-green-400',
 }
 const PAY_DOT: Record<string, string> = {
   fully_paid: 'bg-green-500', deposit_paid: 'bg-yellow-500',
-  waitlist: 'bg-red-500', pending: 'bg-neutral-500', paid: 'bg-green-500',
+  waitlist: 'bg-red-500', pending: 'bg-[var(--sl-text-30)]', paid: 'bg-green-500',
 }
 const PAY_CYCLE: Record<string, string> = {
   waitlist: 'deposit_paid', deposit_paid: 'fully_paid', fully_paid: 'waitlist',
   pending: 'deposit_paid', paid: 'fully_paid',
 }
 
-function dotColor(s: string) { return PAY_DOT[s] ?? 'bg-neutral-500' }
+function dotColor(s: string) { return PAY_DOT[s] ?? 'bg-[var(--sl-text-30)]' }
 
 // ─── Capacity calc (same formula as wizard) ───────────────────────────────────
 
@@ -339,7 +339,7 @@ export default function TournamentPage() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <div className="w-6 h-6 border-2 border-red-600 border-t-transparent rounded-full animate-spin" />
+      <div className="w-6 h-6 border-2 border-[var(--sl-accent)] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 
@@ -364,13 +364,13 @@ export default function TournamentPage() {
   return (
     <div>
       {/* Tournament header */}
-      <div className="border-b border-neutral-800 px-6 pt-8 pb-0 max-w-5xl mx-auto">
-        <Link href="/td" className="text-xs text-neutral-600 hover:text-neutral-300 transition">← MY TOURNAMENTS</Link>
+      <div className="border-b border-[var(--sl-border)] px-6 pt-8 pb-0 max-w-5xl mx-auto">
+        <Link href="/td" className="text-xs text-[var(--sl-text-30)] hover:text-[var(--sl-text-80)] transition">← MY TOURNAMENTS</Link>
         <div className="flex items-start gap-4 mt-3 mb-6">
           <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold tracking-wide truncate">{tournament.name}</h1>
             {detail && (
-              <p className="text-neutral-500 text-xs mt-1">
+              <p className="text-[var(--sl-text-50)] text-xs mt-1">
                 {detail.start_date ? new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date TBD'}
                 {detail.clubs?.name ? ` · ${detail.clubs.name}` : ''}
                 {detail.courts_available ? ` · ${detail.courts_available} courts` : ''}
@@ -383,7 +383,7 @@ export default function TournamentPage() {
             </span>
             <Link
               href={`/td/tournaments/new?edit=${tournament.id}`}
-              className="text-[10px] font-bold tracking-widest text-red-400 border border-red-800 hover:bg-red-900/30 px-3 py-1 rounded-lg transition"
+              className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-30)] hover:bg-[var(--sl-accent-10)] px-3 py-1 rounded-lg transition"
             >
               EDIT SETUP
             </Link>
@@ -395,7 +395,7 @@ export default function TournamentPage() {
           {TABS.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               className={`px-4 py-2.5 text-[11px] font-bold tracking-widest transition border-b-2 -mb-px ${
-                activeTab === tab ? 'border-red-600 text-red-500' : 'border-transparent text-neutral-500 hover:text-neutral-300'
+                activeTab === tab ? 'border-[var(--sl-accent)] text-[var(--sl-accent)]' : 'border-transparent text-[var(--sl-text-50)] hover:text-[var(--sl-text-80)]'
               }`}>
               {tab}
             </button>
@@ -417,9 +417,9 @@ export default function TournamentPage() {
           </div>
         )}
         {error && (
-          <div className="mb-6 bg-red-900/20 border border-red-700/40 text-red-400 text-sm rounded-xl px-4 py-3 flex justify-between">
+          <div className="mb-6 bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] text-[var(--sl-accent)] text-sm rounded-xl px-4 py-3 flex justify-between">
             {error}
-            <button onClick={() => setError(null)} className="ml-3 text-red-600">✕</button>
+            <button onClick={() => setError(null)} className="ml-3 text-[var(--sl-accent)]">✕</button>
           </div>
         )}
 
@@ -434,9 +434,9 @@ export default function TournamentPage() {
           const scheduled = matches.filter(m => m.scheduled_time)
           if (scheduled.length === 0) {
             return (
-              <div className="border border-dashed border-neutral-800 rounded-2xl py-16 text-center">
-                <p className="text-neutral-500 text-sm">No scheduled matches yet.</p>
-                <p className="text-neutral-700 text-xs mt-2">Generate the draw first — the scheduler assigns times and courts automatically.</p>
+              <div className="border border-dashed border-[var(--sl-border)] rounded-2xl py-16 text-center">
+                <p className="text-[var(--sl-text-50)] text-sm">No scheduled matches yet.</p>
+                <p className="text-[var(--sl-text-20)] text-xs mt-2">Generate the draw first — the scheduler assigns times and courts automatically.</p>
               </div>
             )
           }
@@ -460,11 +460,11 @@ export default function TournamentPage() {
             <div className="space-y-10">
               {Object.entries(byDay).map(([dayLabel, courts]) => (
                 <div key={dayLabel}>
-                  <p className="text-[10px] font-bold tracking-widest text-neutral-400 mb-4 uppercase">{dayLabel}</p>
+                  <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-60)] mb-4 uppercase">{dayLabel}</p>
                   <div className="space-y-6">
                     {Object.entries(courts).sort(([a], [b]) => a.localeCompare(b)).map(([courtLabel, courtMatches]) => (
                       <div key={courtLabel}>
-                        <p className="text-[10px] font-bold tracking-widest text-neutral-600 mb-2 uppercase">{courtLabel}</p>
+                        <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-30)] mb-2 uppercase">{courtLabel}</p>
                         <div className="grid gap-2">
                           {courtMatches.map(m => {
                             const dt = new Date(m.scheduled_time!)
@@ -473,12 +473,12 @@ export default function TournamentPage() {
                             const p2 = m.player2_id ? (playerMap[m.player2_id] ?? 'TBD') : 'TBD'
                             const segLabel = m.draw_segment === 'plate' ? ' [Plate]' : ''
                             return (
-                              <div key={m.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl px-4 py-3 flex items-center gap-4 text-sm">
-                                <div className="w-12 font-mono text-xs text-neutral-400 shrink-0">{time}</div>
-                                <div className="w-20 text-[10px] font-bold tracking-widest text-red-500 shrink-0 uppercase">{m.division}{segLabel}</div>
+                              <div key={m.id} className="bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl px-4 py-3 flex items-center gap-4 text-sm">
+                                <div className="w-12 font-mono text-xs text-[var(--sl-text-60)] shrink-0">{time}</div>
+                                <div className="w-20 text-[10px] font-bold tracking-widest text-[var(--sl-accent)] shrink-0 uppercase">{m.division}{segLabel}</div>
                                 <div className="flex-1 flex items-center gap-2 min-w-0">
                                   <span className="truncate text-white">{p1}</span>
-                                  <span className="text-neutral-600 shrink-0">vs</span>
+                                  <span className="text-[var(--sl-text-30)] shrink-0">vs</span>
                                   <span className="truncate text-white">{p2}</span>
                                 </div>
                                 {m.winner_id && (
@@ -502,9 +502,9 @@ export default function TournamentPage() {
           <div>
             {/* Capacity panel */}
             {detail && capacity > 0 && (
-              <div className="mb-6 bg-neutral-900 border border-neutral-800 rounded-2xl px-5 py-4">
-                <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-3">Court Capacity</p>
-                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-neutral-400">
+              <div className="mb-6 bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl px-5 py-4">
+                <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-50)] uppercase mb-3">Court Capacity</p>
+                <div className="flex flex-wrap gap-x-6 gap-y-2 text-xs text-[var(--sl-text-60)]">
                   <span><span className="font-bold text-white">{detail.courts_available}</span> courts</span>
                   {detail.start_date && detail.end_date && (
                     <span><span className="font-bold text-white">
@@ -512,33 +512,33 @@ export default function TournamentPage() {
                     </span> days</span>
                   )}
                   <span><span className="font-bold text-white">{detail.match_duration_minutes}</span>min matches</span>
-                  <span className="text-neutral-700">→</span>
-                  <span>comfortable max <span className="font-bold text-red-500">{capacity} players</span></span>
+                  <span className="text-[var(--sl-text-20)]">→</span>
+                  <span>comfortable max <span className="font-bold text-[var(--sl-accent)]">{capacity} players</span></span>
                 </div>
-                <div className="mt-2 text-xs text-neutral-600">
+                <div className="mt-2 text-xs text-[var(--sl-text-30)]">
                   {registrations.length} registered · {Math.max(0, capacity - registrations.length)} spots remaining
                 </div>
               </div>
             )}
 
             <div className="flex items-center justify-between mb-6">
-              <p className="text-neutral-500 text-sm">{registrations.length} registered</p>
+              <p className="text-[var(--sl-text-50)] text-sm">{registrations.length} registered</p>
               <div className="flex gap-3">
                 {tournament.status === 'setup_pending' && (
                   <button onClick={() => setStatus('registration_open')}
-                    className="bg-red-700 hover:bg-red-600 text-white text-xs font-bold tracking-widest px-4 py-2 rounded-xl transition">
+                    className="bg-[var(--sl-accent)] hover:bg-[var(--sl-accent-hover)] text-white text-xs font-bold tracking-widest px-4 py-2 rounded-xl transition">
                     OPEN REGISTRATION
                   </button>
                 )}
                 {tournament.status === 'registration_open' && (
                   <button onClick={() => setStatus('active')}
-                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2 rounded-xl hover:border-neutral-500 transition">
+                    className="border border-[var(--sl-border)] text-[var(--sl-text-60)] text-xs font-bold tracking-widest px-4 py-2 rounded-xl hover:border-[var(--sl-border)] transition">
                     CLOSE REGISTRATION
                   </button>
                 )}
                 {tournament.status === 'active' && (
                   <button onClick={() => setStatus('completed')}
-                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2 rounded-xl hover:border-neutral-500 transition">
+                    className="border border-[var(--sl-border)] text-[var(--sl-text-60)] text-xs font-bold tracking-widest px-4 py-2 rounded-xl hover:border-[var(--sl-border)] transition">
                     MARK COMPLETED
                   </button>
                 )}
@@ -641,7 +641,7 @@ export default function TournamentPage() {
                 {divs.map(d => (
                   <button key={d} onClick={() => { setActiveDivision(d); setActiveDraw('main') }}
                     className={`text-xs font-bold tracking-widest px-4 py-2 rounded-xl border transition ${
-                      activeDivision === d ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
+                      activeDivision === d ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)] text-white' : 'border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-border)]'
                     }`}>
                     {d}
                   </button>
@@ -650,19 +650,19 @@ export default function TournamentPage() {
             )}
             <div className="flex gap-3 mb-8">
               <button onClick={() => generateDraw(false)} disabled={generatingDraw || matches.length > 0}
-                className="bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl transition">
+                className="bg-[var(--sl-accent)] hover:bg-[var(--sl-accent-hover)] disabled:opacity-40 text-white text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl transition">
                 {generatingDraw ? 'GENERATING...' : 'GENERATE DRAW'}
               </button>
               {matches.length > 0 && (
                 <button onClick={() => generateDraw(true)}
                   disabled={generatingDraw}
-                  className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 disabled:opacity-40 transition">
+                  className="border border-[var(--sl-border)] text-[var(--sl-text-60)] text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-[var(--sl-border)] disabled:opacity-40 transition">
                   REGENERATE (RESET)
                 </button>
               )}
             </div>
             {divs.length === 0 && (
-              <p className="text-neutral-500 text-sm py-10 text-center">No divisions yet. Players need to register first.</p>
+              <p className="text-[var(--sl-text-50)] text-sm py-10 text-center">No divisions yet. Players need to register first.</p>
             )}
             {mainMatches.length > 0 && (() => {
               const displayMatches = activeDraw === 'main' ? mainMatches : plateMatches
@@ -679,7 +679,7 @@ export default function TournamentPage() {
                     {activeDraw === 'main' && plateMatches.length > 0 && (
                       <button
                         onClick={() => setActiveDraw('plate')}
-                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition shrink-0">
+                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-red-200 text-[var(--sl-accent)] hover:bg-red-50 transition shrink-0">
                         PLATE DRAW →
                       </button>
                     )}
@@ -722,21 +722,21 @@ export default function TournamentPage() {
       {/* Score modal */}
       {scoreModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4" onClick={() => setScoreModal(null)}>
-          <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="bg-[var(--sl-bg)] border border-[var(--sl-border)] rounded-2xl p-6 w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
             <h3 className="text-sm font-bold tracking-widest mb-1">ENTER SCORE</h3>
-            <p className="text-neutral-500 text-xs mb-5">Round {scoreModal.round_number} · {scoreModal.division} · {scoreModal.draw_segment}</p>
+            <p className="text-[var(--sl-text-50)] text-xs mb-5">Round {scoreModal.round_number} · {scoreModal.division} · {scoreModal.draw_segment}</p>
             <div className="mb-4">
-              <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Score (optional)</label>
-              <input className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition"
+              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-50)] uppercase mb-2">Score (optional)</label>
+              <input className="w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-xl px-4 py-3 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent)] transition"
                 placeholder="e.g. 11-8, 11-5, 11-9" value={scoreInput} onChange={e => setScoreInput(e.target.value)} />
             </div>
             <div className="mb-6">
-              <label className="block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-3">Winner *</label>
+              <label className="block text-[10px] font-bold tracking-widest text-[var(--sl-text-50)] uppercase mb-3">Winner *</label>
               <div className="grid grid-cols-2 gap-3">
                 {(['p1', 'p2'] as const).map(key => (
                   <button key={key} onClick={() => setScoreWinner(key)}
                     className={`py-3 px-3 rounded-xl text-sm font-semibold border transition text-center ${
-                      scoreWinner === key ? 'border-red-600 bg-red-900/30 text-red-400' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
+                      scoreWinner === key ? 'border-[var(--sl-accent)] bg-[var(--sl-accent-15)] text-[var(--sl-accent)]' : 'border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-border)]'
                     }`}>
                     {playerName(key === 'p1' ? scoreModal.player1_id : scoreModal.player2_id)}
                   </button>
@@ -745,11 +745,11 @@ export default function TournamentPage() {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setScoreModal(null)}
-                className="flex-1 text-xs font-bold tracking-widest text-neutral-400 border border-neutral-700 py-3 rounded-xl hover:border-neutral-500 transition">
+                className="flex-1 text-xs font-bold tracking-widest text-[var(--sl-text-60)] border border-[var(--sl-border)] py-3 rounded-xl hover:border-[var(--sl-border)] transition">
                 CANCEL
               </button>
               <button onClick={saveScore} disabled={!scoreWinner || savingScore}
-                className="flex-1 text-xs font-bold tracking-widest bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white py-3 rounded-xl transition">
+                className="flex-1 text-xs font-bold tracking-widest bg-[var(--sl-accent)] hover:bg-[var(--sl-accent-hover)] disabled:opacity-40 text-white py-3 rounded-xl transition">
                 {savingScore ? 'SAVING...' : 'SAVE RESULT'}
               </button>
             </div>
@@ -766,9 +766,9 @@ function OvRow({ label, value }: { label: string; value: string | number | boole
   if (value === null || value === undefined || value === '') return null
   const display = typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)
   return (
-    <div className="flex justify-between items-baseline gap-4 py-1.5 border-b border-neutral-800 last:border-0">
-      <span className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase flex-shrink-0">{label}</span>
-      <span className="text-sm text-neutral-200 text-right">{display}</span>
+    <div className="flex justify-between items-baseline gap-4 py-1.5 border-b border-[var(--sl-border)] last:border-0">
+      <span className="text-[10px] font-bold tracking-widest text-[var(--sl-text-50)] uppercase flex-shrink-0">{label}</span>
+      <span className="text-sm text-[var(--sl-text)] text-right">{display}</span>
     </div>
   )
 }
@@ -799,8 +799,8 @@ function OverviewTab({
   detail: TournamentDetail | null
   registrationCount: number
 }) {
-  const sCls = 'bg-neutral-900 border border-neutral-800 rounded-2xl p-5 space-y-1'
-  const hCls = 'text-[11px] font-bold tracking-widest text-red-500 uppercase mb-3'
+  const sCls = 'bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5 space-y-1'
+  const hCls = 'text-[11px] font-bold tracking-widest text-[var(--sl-accent)] uppercase mb-3'
 
   const days =
     detail?.start_date && detail?.end_date
@@ -883,8 +883,8 @@ function OverviewTab({
           const courts = detail?.courts_available ?? 0
           const matchMins = detail?.match_duration_minutes ?? 40
           return (
-            <div className="pt-3 mt-2 border-t border-neutral-800">
-              <span className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase">Defined Schedule Blocks</span>
+            <div className="pt-3 mt-2 border-t border-[var(--sl-border)]">
+              <span className="text-[10px] font-bold tracking-widest text-[var(--sl-text-50)] uppercase">Defined Schedule Blocks</span>
               <div className="mt-2 space-y-1">
                 {blocks.map((b, i) => {
                   // rough per-day slot estimate (simplified, mirrors capacity logic without lunch subtract for display)
@@ -892,16 +892,16 @@ function OverviewTab({
                   const mins = Math.max(0, (b.end_time ? parseTime(b.end_time) : 0) - (b.start_time ? parseTime(b.start_time) : 0))
                   const perDaySlots = courts > 0 && slot > 0 ? Math.floor(mins / slot) * courts : 0
                   return (
-                    <div key={i} className="flex justify-between text-sm text-neutral-300">
-                      <span className="text-neutral-500">{b.label}</span>
-                      <span className="font-mono text-neutral-400">
-                        {b.start_time} – {b.end_time} <span className="text-neutral-600">· ~{perDaySlots} slots</span>
+                    <div key={i} className="flex justify-between text-sm text-[var(--sl-text-80)]">
+                      <span className="text-[var(--sl-text-50)]">{b.label}</span>
+                      <span className="font-mono text-[var(--sl-text-60)]">
+                        {b.start_time} – {b.end_time} <span className="text-[var(--sl-text-30)]">· ~{perDaySlots} slots</span>
                       </span>
                     </div>
                   )
                 })}
               </div>
-              <p className="text-[10px] text-neutral-600 mt-1">Blocks derived from stored daily window (raw per-day variation not persisted separately).</p>
+              <p className="text-[10px] text-[var(--sl-text-30)] mt-1">Blocks derived from stored daily window (raw per-day variation not persisted separately).</p>
             </div>
           )
         })()}
@@ -954,8 +954,8 @@ function OverviewTab({
         {detail?.sponsor_name && <OvRow label="Sponsor" value={detail.sponsor_name} />}
         {detail?.tournament_notes && (
           <div className="pt-2">
-            <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-1">Notes</p>
-            <p className="text-xs text-neutral-400 whitespace-pre-line">{detail.tournament_notes}</p>
+            <p className="text-[10px] font-bold tracking-widest text-[var(--sl-text-50)] uppercase mb-1">Notes</p>
+            <p className="text-xs text-[var(--sl-text-60)] whitespace-pre-line">{detail.tournament_notes}</p>
           </div>
         )}
       </div>
@@ -968,8 +968,8 @@ function OverviewTab({
 
 function SettToggle({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <button type="button" onClick={() => onChange(!value)} className="flex items-center gap-3 text-sm text-neutral-300">
-      <div className={`w-10 h-5 rounded-full transition relative ${value ? 'bg-red-700' : 'bg-neutral-700'}`}>
+    <button type="button" onClick={() => onChange(!value)} className="flex items-center gap-3 text-sm text-[var(--sl-text-80)]">
+      <div className={`w-10 h-5 rounded-full transition relative ${value ? 'bg-[var(--sl-accent)]' : 'bg-[var(--sl-border)]'}`}>
         <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${value ? 'left-5' : 'left-0.5'}`} />
       </div>
       {label}
@@ -979,8 +979,8 @@ function SettToggle({ value, onChange, label }: { value: boolean; onChange: (v: 
 
 function SettCheck({ value, onChange, label }: { value: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <label className="flex items-center gap-3 cursor-pointer text-sm text-neutral-300">
-      <div onClick={() => onChange(!value)} className={`w-5 h-5 rounded border-2 flex items-center justify-center transition flex-shrink-0 ${value ? 'bg-red-700 border-red-700' : 'border-neutral-600'}`}>
+    <label className="flex items-center gap-3 cursor-pointer text-sm text-[var(--sl-text-80)]">
+      <div onClick={() => onChange(!value)} className={`w-5 h-5 rounded border-2 flex items-center justify-center transition flex-shrink-0 ${value ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)]' : 'border-[var(--sl-border)]'}`}>
         {value && <span className="text-white text-[10px] font-bold">✓</span>}
       </div>
       {label}
@@ -1359,10 +1359,10 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
   onUpdate: () => void
   onDelete: () => void
 }) {
-  const iCls = 'w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition'
-  const lCls = 'block text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2'
-  const sCls = 'bg-neutral-900 border border-neutral-800 rounded-2xl p-6 space-y-4'
-  const hCls = 'text-sm font-bold tracking-wide text-neutral-300 uppercase'
+  const iCls = 'w-full bg-[var(--sl-surface-deep)] border border-[var(--sl-border)] rounded-xl px-4 py-3 text-sm text-[var(--sl-text)] focus:outline-none focus:border-[var(--sl-accent)] transition'
+  const lCls = 'block text-[10px] font-bold tracking-widest text-[var(--sl-text-50)] uppercase mb-2'
+  const sCls = 'bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-6 space-y-4'
+  const hCls = 'text-sm font-bold tracking-wide text-[var(--sl-text-80)] uppercase'
 
   const d = detail
 
@@ -1506,9 +1506,9 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
   return (
     <div className="space-y-5 max-w-2xl">
       {saveError && (
-        <div className="bg-red-900/20 border border-red-700/40 text-red-400 text-sm rounded-xl px-4 py-3 flex justify-between">
+        <div className="bg-[var(--sl-accent-10)] border border-[var(--sl-accent-30)] text-[var(--sl-accent)] text-sm rounded-xl px-4 py-3 flex justify-between">
           {saveError}
-          <button onClick={() => setSaveError(null)} className="ml-3 text-red-600">✕</button>
+          <button onClick={() => setSaveError(null)} className="ml-3 text-[var(--sl-accent)]">✕</button>
         </div>
       )}
 
@@ -1526,7 +1526,7 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
           </select>
         </div>
         {d?.clubs && (
-          <p className="text-xs text-neutral-600">Venue: {d.clubs.name}{d.clubs.city ? `, ${d.clubs.city}` : ''}</p>
+          <p className="text-xs text-[var(--sl-text-30)]">Venue: {d.clubs.name}{d.clubs.city ? `, ${d.clubs.city}` : ''}</p>
         )}
         <div>
           <label className={lCls}>Courts Available</label>
@@ -1637,7 +1637,7 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
             </div>
           </div>
         ) : (
-          <p className="text-xs text-neutral-500">Rolling Lunch — no fixed break</p>
+          <p className="text-xs text-[var(--sl-text-50)]">Rolling Lunch — no fixed break</p>
         )}
         <div>
           <label className={lCls}>Afternoon Session Start</label>
@@ -1697,7 +1697,7 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
           <div className="flex gap-3">
             {FORFEIT_OPTS.map(o => (
               <button key={o} type="button" onClick={() => set('forfeit_minutes', o)}
-                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.forfeit_minutes === o ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.forfeit_minutes === o ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)] text-white' : 'border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-border)]'}`}>
                 {o} min
               </button>
             ))}
@@ -1724,7 +1724,7 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
             <div className="flex gap-3">
               {REMINDER_OPTS.map(o => (
                 <button key={o} type="button" onClick={() => set('reminder_hours', o)}
-                  className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.reminder_hours === o ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                  className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.reminder_hours === o ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)] text-white' : 'border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-border)]'}`}>
                   {o}h
                 </button>
               ))}
@@ -1755,7 +1755,7 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
           <div className="flex gap-3">
             {DISPLAY_OPTS.map(o => (
               <button key={o} type="button" onClick={() => set('court_assignment_display', o)}
-                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.court_assignment_display === o ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'}`}>
+                className={`flex-1 py-2.5 rounded-xl border text-sm font-semibold transition ${f.court_assignment_display === o ? 'bg-[var(--sl-accent)] border-[var(--sl-accent)] text-white' : 'border-[var(--sl-border)] text-[var(--sl-text-60)] hover:border-[var(--sl-border)]'}`}>
                 {o}
               </button>
             ))}
@@ -1765,29 +1765,29 @@ function SettingsTab({ tournament, detail, onUpdate, onDelete }: {
 
       {/* ── SAVE BUTTON ── */}
       <button onClick={save} disabled={saving}
-        className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-base font-bold tracking-wide py-3.5 rounded-xl transition">
+        className="w-full bg-[var(--sl-accent)] hover:bg-[var(--sl-accent-hover)] disabled:opacity-50 text-white text-base font-bold tracking-wide py-3.5 rounded-xl transition">
         {saved ? 'SAVED ✓' : saving ? 'SAVING...' : 'SAVE CHANGES'}
       </button>
 
       {/* ── DANGER ZONE ── */}
-      <div className="bg-neutral-900 border border-red-900/30 rounded-2xl p-6">
-        <h2 className="text-sm font-bold tracking-wide text-red-500 uppercase mb-2">Danger Zone</h2>
-        <p className="text-sm text-neutral-500 mb-5">Permanently deletes all registrations, matches, and draw data. This cannot be undone.</p>
+      <div className="bg-[var(--sl-surface)] border border-red-900/30 rounded-2xl p-6">
+        <h2 className="text-sm font-bold tracking-wide text-[var(--sl-accent)] uppercase mb-2">Danger Zone</h2>
+        <p className="text-sm text-[var(--sl-text-50)] mb-5">Permanently deletes all registrations, matches, and draw data. This cannot be undone.</p>
         {!confirmDelete ? (
           <button onClick={() => setConfirmDelete(true)}
-            className="text-sm font-bold tracking-wide text-red-500 border border-red-900/50 px-5 py-3 rounded-xl hover:bg-red-900/20 transition">
+            className="text-sm font-bold tracking-wide text-[var(--sl-accent)] border border-[var(--sl-accent-30)] px-5 py-3 rounded-xl hover:bg-[var(--sl-accent-10)] transition">
             DELETE TOURNAMENT
           </button>
         ) : (
           <div className="space-y-3">
-            <p className="text-sm font-bold text-red-400">Delete &ldquo;{tournament.name}&rdquo;? All data will be lost.</p>
+            <p className="text-sm font-bold text-[var(--sl-accent)]">Delete &ldquo;{tournament.name}&rdquo;? All data will be lost.</p>
             <div className="flex gap-3">
               <button onClick={() => setConfirmDelete(false)}
-                className="flex-1 text-sm font-bold border border-neutral-700 text-neutral-400 py-3 rounded-xl hover:border-neutral-500 transition">
+                className="flex-1 text-sm font-bold border border-[var(--sl-border)] text-[var(--sl-text-60)] py-3 rounded-xl hover:border-[var(--sl-border)] transition">
                 CANCEL
               </button>
               <button onClick={onDelete}
-                className="flex-1 text-sm font-bold bg-red-700 hover:bg-red-600 text-white py-3 rounded-xl transition">
+                className="flex-1 text-sm font-bold bg-[var(--sl-accent)] hover:bg-[var(--sl-accent-hover)] text-white py-3 rounded-xl transition">
                 YES, DELETE
               </button>
             </div>

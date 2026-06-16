@@ -19,7 +19,7 @@ export default async function TDLayout({ children }: { children: React.ReactNode
   }
 
   return (
-    <div data-td-light className="min-h-screen bg-white text-neutral-900">
+    <div data-td-light className="min-h-screen" style={{ backgroundColor: 'var(--sl-bg)', color: 'var(--sl-text)' }}>
       <nav style={{ borderBottom: '2px solid var(--sl-accent)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 40, background: '#ffffff', height: 56 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
           <Link href="/td" style={{ display: 'flex', alignItems: 'center' }}>
