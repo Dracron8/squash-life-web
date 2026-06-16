@@ -118,7 +118,6 @@ export default async function TDDashboard() {
                     </span>
                     <Link
                       href={`/td/tournaments/new?edit=${t.id}`}
-                      onClick={(e) => e.stopPropagation()}
                       className="text-[10px] font-bold tracking-widest text-red-400 border border-red-800 hover:bg-red-900/30 px-3 py-1 rounded-lg transition"
                     >
                       EDIT SETUP
