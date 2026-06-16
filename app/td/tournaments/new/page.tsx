@@ -251,7 +251,7 @@ export default function NewTournamentPage() {
       const { data: profile } = await supabase
         .from('profiles')
         .select('club_name, club_city, club_province, club_country')
-        .eq('user_id', user.id)
+        .eq('id', user.id)
         .maybeSingle()
       if (!profile) return
       setForm(prev => ({
@@ -488,12 +488,12 @@ export default function NewTournamentPage() {
 
         // Upsert club profile for future pre-fill
         await supabase.from('profiles').upsert({
-          user_id: user.id,
+          id: user.id,
           club_name: form.venue_name.trim(),
           club_city: form.venue_city.trim(),
           club_province: form.venue_province.trim(),
           club_country: form.venue_country.trim(),
-        }, { onConflict: 'user_id' })
+        }, { onConflict: 'id' })
 
         // Clear wizard state
         localStorage.removeItem(LS_KEY)
@@ -527,12 +527,12 @@ export default function NewTournamentPage() {
 
         // Upsert club profile for future pre-fill
         await supabase.from('profiles').upsert({
-          user_id: user.id,
+          id: user.id,
           club_name: form.venue_name.trim(),
           club_city: form.venue_city.trim(),
           club_province: form.venue_province.trim(),
           club_country: form.venue_country.trim(),
-        }, { onConflict: 'user_id' })
+        }, { onConflict: 'id' })
 
         // Clear wizard state
         localStorage.removeItem(LS_KEY)

@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { reconstructDaySchedules } from '@/lib/td/flutterParity'
-import { generateBracketAndSchedule, type DrawConstraint } from '@/lib/td/drawGenerator'
+import { generateBracketAndSchedule } from '@/lib/td/drawGenerator'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -102,7 +102,7 @@ type Match = {
   court_id: string | null
 }
 
-const TABS = ['OVERVIEW', 'SCHEDULE', 'REGISTRATIONS', 'DRAW', 'SCORE ENTRY', 'SETTINGS'] as const
+const TABS = ['OVERVIEW', 'BRACKET', 'SCHEDULE', 'PLAYERS', 'SETUP'] as const
 type Tab = typeof TABS[number]
 
 const STATUS_LABEL: Record<string, string> = {
@@ -190,20 +190,6 @@ export default function TournamentPage() {
   const [showCreatedBanner, setShowCreatedBanner] = useState(false)
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
 
-  // Constraint wizard
-  const [showWizard, setShowWizard] = useState(false)
-  const [wizardForceReset, setWizardForceReset] = useState(false)
-  const [wizardAnswer, setWizardAnswer] = useState<'pending' | 'yes'>('pending')
-  const [constraints, setConstraints] = useState<DrawConstraint[]>([])
-  const [pendingConstraint, setPendingConstraint] = useState<{
-    userId: string
-    playerName: string
-    division: string
-    type: 'bye' | 'custom_time' | null
-    day: number
-    notBefore: string
-  } | null>(null)
-  const [constraintSearch, setConstraintSearch] = useState('')
 
   const fetchAll = useCallback(async () => {
     const supabase = createClient()
@@ -288,7 +274,7 @@ export default function TournamentPage() {
   })
 
   function playerName(uid: string | null) {
-    if (!uid) return 'BYE'
+    if (!uid) return 'TBD'
     return playerMap[uid] || uid.slice(0, 8) + '...'
   }
 
@@ -298,9 +284,8 @@ export default function TournamentPage() {
     setTournament(prev => prev ? { ...prev, status } : prev)
   }
 
-  async function generateDraw(forceReset: boolean, drawConstraints: DrawConstraint[] = []) {
+  async function generateDraw(forceReset: boolean) {
     if (!tournament) return
-    setShowWizard(false)
     setGeneratingDraw(true)
     setError(null)
     const supabase = createClient()
@@ -309,20 +294,11 @@ export default function TournamentPage() {
       tournament.id,
       tournament.draw_type,
       forceReset,
-      drawConstraints,
+      [],
     )
     if (genErr) { setError(genErr); setGeneratingDraw(false); return }
     await fetchAll()
     setGeneratingDraw(false)
-  }
-
-  function openWizard(forceReset: boolean) {
-    setConstraints([])
-    setWizardAnswer('pending')
-    setPendingConstraint(null)
-    setConstraintSearch('')
-    setWizardForceReset(forceReset)
-    setShowWizard(true)
   }
 
   async function saveScore() {
@@ -487,8 +463,8 @@ export default function TournamentPage() {
                           {courtMatches.map(m => {
                             const dt = new Date(m.scheduled_time!)
                             const time = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
-                            const p1 = m.player1_id ? (playerMap[m.player1_id] ?? 'TBD') : 'BYE'
-                            const p2 = m.player2_id ? (playerMap[m.player2_id] ?? 'TBD') : 'BYE'
+                            const p1 = m.player1_id ? (playerMap[m.player1_id] ?? 'TBD') : 'TBD'
+                            const p2 = m.player2_id ? (playerMap[m.player2_id] ?? 'TBD') : 'TBD'
                             const segLabel = m.draw_segment === 'plate' ? ' [Plate]' : ''
                             return (
                               <div key={m.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl px-4 py-3 flex items-center gap-4 text-sm">
@@ -515,8 +491,8 @@ export default function TournamentPage() {
           )
         })()}
 
-        {/* ── REGISTRATIONS ─────────────────────────────────────────────── */}
-        {activeTab === 'REGISTRATIONS' && (
+        {/* ── PLAYERS ───────────────────────────────────────────────────── */}
+        {activeTab === 'PLAYERS' && (
           <div>
             {/* Capacity panel */}
             {detail && capacity > 0 && (
@@ -622,8 +598,8 @@ export default function TournamentPage() {
           </div>
         )}
 
-        {/* ── DRAW ──────────────────────────────────────────────────────── */}
-        {activeTab === 'DRAW' && (
+        {/* ── BRACKET ───────────────────────────────────────────────────── */}
+        {activeTab === 'BRACKET' && (
           <div>
             {divs.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
@@ -638,12 +614,12 @@ export default function TournamentPage() {
               </div>
             )}
             <div className="flex gap-3 mb-8">
-              <button onClick={() => openWizard(false)} disabled={generatingDraw || matches.length > 0}
+              <button onClick={() => generateDraw(false)} disabled={generatingDraw || matches.length > 0}
                 className="bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl transition">
                 {generatingDraw ? 'GENERATING...' : 'GENERATE DRAW'}
               </button>
               {matches.length > 0 && (
-                <button onClick={() => openWizard(true)}
+                <button onClick={() => generateDraw(true)}
                   disabled={generatingDraw}
                   className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 disabled:opacity-40 transition">
                   REGENERATE (RESET)
@@ -657,7 +633,7 @@ export default function TournamentPage() {
               <div className="mb-10">
                 <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">MAIN DRAW — {activeDivision}</p>
                 <div className="overflow-x-auto">
-                  <BracketView matches={mainMatches} maxRound={maxRound} playerName={playerName} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
+                  <BracketView matches={mainMatches} maxRound={maxRound} playerName={playerName} startDate={detail?.start_date ?? null} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
                 </div>
               </div>
             )}
@@ -665,277 +641,18 @@ export default function TournamentPage() {
               <div>
                 <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">PLATE DRAW — {activeDivision}</p>
                 <div className="overflow-x-auto">
-                  <BracketView matches={plateMatches} maxRound={Math.max(...plateMatches.map(m => m.round_number))} playerName={playerName} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
+                  <BracketView matches={plateMatches} maxRound={Math.max(...plateMatches.map(m => m.round_number))} playerName={playerName} startDate={detail?.start_date ?? null} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
                 </div>
               </div>
             )}
           </div>
         )}
 
-        {/* ── SCORE ENTRY ───────────────────────────────────────────────── */}
-        {activeTab === 'SCORE ENTRY' && (
-          <div>
-            {divs.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-6">
-                {divs.map(d => (
-                  <button key={d} onClick={() => setActiveDivision(d)}
-                    className={`text-xs font-bold tracking-widest px-4 py-2 rounded-xl border transition ${
-                      activeDivision === d ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
-                    }`}>
-                    {d}
-                  </button>
-                ))}
-              </div>
-            )}
-            {divMatches.length === 0 ? (
-              <p className="text-neutral-500 text-sm py-10 text-center">No matches yet. Generate the draw first.</p>
-            ) : (
-              <div className="space-y-2">
-                {divMatches
-                  .filter(m => m.player1_id && m.player2_id)
-                  .sort((a, b) => a.round_number - b.round_number || a.match_index - b.match_index)
-                  .map(m => {
-                    const done = !!m.winner_id
-                    return (
-                      <button key={m.id} disabled={done}
-                        onClick={() => { if (done) return; setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(null) }}
-                        className={`w-full text-left bg-neutral-900 border rounded-2xl p-4 transition ${
-                          done ? 'border-neutral-800 opacity-60 cursor-default' : 'border-neutral-800 hover:border-red-700/50 cursor-pointer'
-                        }`}>
-                        <div className="flex items-center justify-between gap-4">
-                          <div className="flex-1 min-w-0 text-sm">
-                            <span className="text-[10px] font-bold tracking-widest text-neutral-600 mr-3">RD {m.round_number} · {m.draw_segment.toUpperCase()}</span>
-                            <span className={`font-medium ${m.winner_id === m.player1_id ? 'text-red-500' : 'text-neutral-200'}`}>{playerName(m.player1_id)}</span>
-                            <span className="text-neutral-600 mx-2">vs</span>
-                            <span className={`font-medium ${m.winner_id === m.player2_id ? 'text-red-500' : 'text-neutral-200'}`}>{playerName(m.player2_id)}</span>
-                          </div>
-                          <div className="shrink-0">
-                            {done
-                              ? <span className="text-[10px] font-bold tracking-widest text-green-400">{m.score || 'COMPLETE'}</span>
-                              : <span className="text-[10px] font-bold tracking-widest text-red-500">ENTER →</span>
-                            }
-                          </div>
-                        </div>
-                      </button>
-                    )
-                  })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* ── SETTINGS ──────────────────────────────────────────────────── */}
-        {activeTab === 'SETTINGS' && (
+        {/* ── SETUP ─────────────────────────────────────────────────────── */}
+        {activeTab === 'SETUP' && (
           <SettingsTab tournament={tournament} detail={detail ?? null} onUpdate={fetchAll} onDelete={deleteTournament} />
         )}
       </div>
-
-      {/* Constraint wizard modal */}
-      {showWizard && (() => {
-        const maxConstraints = Math.max(2, Math.floor(registrations.length / 10))
-        const atMax = constraints.length >= maxConstraints
-
-        // nextPowerOf2 helper
-        function nextPow2(n: number): number {
-          let p = 1; while (p < n) p *= 2; return p
-        }
-
-        // Divisions with BYE slots available
-        const divByeCount: Record<string, number> = {}
-        for (const div of divs) {
-          const n = divCounts[div] ?? 0
-          divByeCount[div] = nextPow2(n) - n
-        }
-
-        // Player search results (exclude already-constrained players)
-        const constrainedIds = new Set(constraints.map(c => c.userId))
-        const searchLower = constraintSearch.toLowerCase()
-        const searchResults = searchLower.length >= 1
-          ? registrations.filter(r =>
-              !constrainedIds.has(r.user_id) &&
-              `${r.first_name} ${r.last_name}`.toLowerCase().includes(searchLower)
-            ).slice(0, 8)
-          : []
-
-        return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4"
-            onClick={() => setShowWizard(false)}>
-            <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl"
-              onClick={e => e.stopPropagation()}>
-
-              <h3 className="text-sm font-bold tracking-widest mb-1">SPECIAL SCHEDULING NEEDS?</h3>
-              <p className="text-neutral-500 text-xs mb-5">Do any players need a custom slot?</p>
-
-              {wizardAnswer === 'pending' && (
-                <div className="flex gap-3 mb-6">
-                  <button onClick={() => setWizardAnswer('yes')}
-                    className="flex-1 py-2.5 rounded-xl border border-neutral-600 text-sm font-semibold text-neutral-200 hover:border-red-600 hover:text-red-400 transition">
-                    YES
-                  </button>
-                  <button onClick={() => generateDraw(wizardForceReset, [])}
-                    className="flex-1 py-2.5 rounded-xl border border-neutral-700 text-sm font-semibold text-neutral-500 hover:border-neutral-500 transition">
-                    NO
-                  </button>
-                  <button onClick={() => generateDraw(wizardForceReset, [])}
-                    className="flex-1 py-2.5 rounded-xl border border-neutral-700 text-sm font-semibold text-neutral-500 hover:border-neutral-500 transition">
-                    SKIP
-                  </button>
-                </div>
-              )}
-
-              {wizardAnswer === 'yes' && (
-                <>
-                  {/* Constraint list */}
-                  {constraints.length > 0 && (
-                    <div className="mb-4 space-y-2">
-                      {constraints.map(c => (
-                        <div key={c.userId} className="flex items-center justify-between bg-neutral-800 rounded-xl px-4 py-2.5 text-sm">
-                          <span className="text-neutral-200 font-medium">
-                            {registrations.find(r => r.user_id === c.userId)
-                              ? `${registrations.find(r => r.user_id === c.userId)!.first_name} ${registrations.find(r => r.user_id === c.userId)!.last_name}`
-                              : c.userId.slice(0, 8)}
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <span className="text-[10px] font-bold tracking-widest text-red-400">
-                              {c.type === 'bye' ? 'BYE' : `DAY ${c.day} · NOT BEFORE ${c.notBefore}`}
-                            </span>
-                            <button onClick={() => setConstraints(prev => prev.filter(x => x.userId !== c.userId))}
-                              className="text-neutral-600 hover:text-red-400 transition text-base leading-none">×</button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Pending constraint builder */}
-                  {pendingConstraint ? (
-                    <div className="mb-4 bg-neutral-800 rounded-xl p-4 space-y-3">
-                      <p className="text-xs font-bold tracking-widest text-neutral-400">
-                        {pendingConstraint.playerName}
-                        <span className="ml-2 text-neutral-600">{pendingConstraint.division}</span>
-                      </p>
-
-                      {pendingConstraint.type === null && (
-                        <div className="flex gap-3">
-                          {(divByeCount[pendingConstraint.division] ?? 0) > 0 && (
-                            <button onClick={() => {
-                              setConstraints(prev => [...prev, { userId: pendingConstraint.userId, type: 'bye' }])
-                              setPendingConstraint(null)
-                              setConstraintSearch('')
-                            }} className="flex-1 py-2 rounded-xl border border-neutral-600 text-xs font-bold tracking-widest text-neutral-300 hover:border-red-600 hover:text-red-400 transition">
-                              FIRST ROUND BYE
-                            </button>
-                          )}
-                          <button onClick={() => setPendingConstraint(prev => prev ? { ...prev, type: 'custom_time' } : null)}
-                            className="flex-1 py-2 rounded-xl border border-neutral-600 text-xs font-bold tracking-widest text-neutral-300 hover:border-red-600 hover:text-red-400 transition">
-                            CUSTOM TIME
-                          </button>
-                        </div>
-                      )}
-
-                      {pendingConstraint.type === 'custom_time' && (
-                        <>
-                          <div>
-                            <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Day</p>
-                            <div className="flex gap-2">
-                              {[1, 2, 3].map(d => (
-                                <button key={d} onClick={() => setPendingConstraint(prev => prev ? { ...prev, day: d } : null)}
-                                  className={`flex-1 py-2 rounded-xl border text-xs font-bold tracking-widest transition ${
-                                    pendingConstraint.day === d ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-600 text-neutral-400 hover:border-neutral-400'
-                                  }`}>
-                                  DAY {d}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Not before</p>
-                            <input type="time"
-                              className="w-full bg-neutral-900 border border-neutral-600 rounded-xl px-4 py-2.5 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition"
-                              value={pendingConstraint.notBefore}
-                              onChange={e => setPendingConstraint(prev => prev ? { ...prev, notBefore: e.target.value } : null)}
-                            />
-                          </div>
-                          <div className="flex gap-3 pt-1">
-                            <button onClick={() => { setPendingConstraint(null); setConstraintSearch('') }}
-                              className="flex-1 py-2 rounded-xl border border-neutral-700 text-xs font-bold tracking-widest text-neutral-500 hover:border-neutral-500 transition">
-                              CANCEL
-                            </button>
-                            <button
-                              disabled={!pendingConstraint.notBefore}
-                              onClick={() => {
-                                setConstraints(prev => [...prev, {
-                                  userId: pendingConstraint.userId,
-                                  type: 'custom_time',
-                                  day: pendingConstraint.day,
-                                  notBefore: pendingConstraint.notBefore,
-                                }])
-                                setPendingConstraint(null)
-                                setConstraintSearch('')
-                              }}
-                              className="flex-1 py-2 rounded-xl bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest transition">
-                              ADD
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  ) : (
-                    !atMax ? (
-                      <div className="mb-4 relative">
-                        <input
-                          className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-red-600 transition"
-                          placeholder="Search player by name…"
-                          value={constraintSearch}
-                          onChange={e => setConstraintSearch(e.target.value)}
-                        />
-                        {searchResults.length > 0 && (
-                          <div className="absolute left-0 right-0 top-full mt-1 bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden z-10">
-                            {searchResults.map(r => (
-                              <button key={r.user_id}
-                                onClick={() => {
-                                  setPendingConstraint({
-                                    userId: r.user_id,
-                                    playerName: `${r.first_name} ${r.last_name}`,
-                                    division: r.division ?? '',
-                                    type: null,
-                                    day: 1,
-                                    notBefore: '09:00',
-                                  })
-                                  setConstraintSearch('')
-                                }}
-                                className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-neutral-700 transition text-left">
-                                <span className="text-sm text-neutral-200">{r.first_name} {r.last_name}</span>
-                                <span className="text-[10px] font-bold tracking-widest text-red-500">{r.division}</span>
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <p className="mb-4 text-xs text-neutral-500 text-center py-2">Maximum custom slots reached ({maxConstraints})</p>
-                    )
-                  )}
-                </>
-              )}
-
-              <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowWizard(false)}
-                  className="flex-1 text-xs font-bold tracking-widest text-neutral-400 border border-neutral-700 py-3 rounded-xl hover:border-neutral-500 transition">
-                  CANCEL
-                </button>
-                {wizardAnswer === 'yes' && (
-                  <button onClick={() => generateDraw(wizardForceReset, constraints)}
-                    disabled={generatingDraw}
-                    className="flex-1 text-xs font-bold tracking-widest bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white py-3 rounded-xl transition">
-                    {generatingDraw ? 'GENERATING...' : wizardForceReset ? 'CONFIRM + REGENERATE' : 'CONFIRM + GENERATE'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        )
-      })()}
 
       {/* Score modal */}
       {scoreModal && (
@@ -1208,10 +925,25 @@ function SettCheck({ value, onChange, label }: { value: boolean; onChange: (v: b
 
 // ─── Bracket View ─────────────────────────────────────────────────────────────
 
-function BracketView({ matches, maxRound, playerName, onMatchTap }: {
+function fmtMatchSlot(m: Match, startDate: string | null): string {
+  if (!m.scheduled_time) return '—'
+  const dt = new Date(m.scheduled_time)
+  const dayNum = startDate
+    ? Math.floor((dt.getTime() - new Date(startDate + 'T00:00:00').getTime()) / 86400000) + 1
+    : 1
+  const h = dt.getHours()
+  const min = dt.getMinutes().toString().padStart(2, '0')
+  const ampm = h >= 12 ? 'pm' : 'am'
+  const h12 = h % 12 === 0 ? 12 : h % 12
+  const court = m.court_id ?? '?'
+  return `Day ${dayNum} · Court ${court} · ${h12}:${min}${ampm}`
+}
+
+function BracketView({ matches, maxRound, playerName, startDate, onMatchTap }: {
   matches: Match[]
   maxRound: number
   playerName: (id: string | null) => string
+  startDate: string | null
   onMatchTap?: (match: Match) => void
 }) {
   const rounds: Match[][] = []
@@ -1232,25 +964,31 @@ function BracketView({ matches, maxRound, playerName, onMatchTap }: {
                 const p1w = m.winner_id === m.player1_id
                 const p2w = m.winner_id === m.player2_id
                 const canTap = onMatchTap && (m.player1_id || m.player2_id)
+                const slot = fmtMatchSlot(m, startDate)
                 return (
                   <div
                     key={m.id}
                     onClick={canTap ? () => onMatchTap(m) : undefined}
-                    className={`w-44 bg-neutral-900 border rounded-xl overflow-hidden transition ${
+                    className={`w-48 bg-neutral-900 border rounded-xl overflow-hidden transition ${
                       m.winner_id ? 'border-red-900/50' : 'border-neutral-800'
                     } ${canTap ? 'cursor-pointer hover:border-red-600/60 hover:bg-neutral-800/60' : ''}`}
                   >
                     <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p1w ? 'bg-red-900/20' : ''}`}>
-                      <span className={`text-xs truncate max-w-[7rem] ${p1w ? 'font-bold text-red-400' : !m.player1_id ? 'italic text-neutral-700' : 'text-neutral-400'}`}>
+                      <span className={`text-xs truncate ${p1w ? 'font-bold text-red-400' : 'text-neutral-400'}`}>
                         {playerName(m.player1_id)}
                       </span>
-                      {p1w && <span className="text-[8px] text-red-500 ml-1">✓</span>}
+                      {p1w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
+                      {p1w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
                     </div>
-                    <div className={`flex items-center justify-between px-3 py-2 ${p2w ? 'bg-red-900/20' : ''}`}>
-                      <span className={`text-xs truncate max-w-[7rem] ${p2w ? 'font-bold text-red-400' : !m.player2_id ? 'italic text-neutral-700' : 'text-neutral-400'}`}>
+                    <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p2w ? 'bg-red-900/20' : ''}`}>
+                      <span className={`text-xs truncate ${p2w ? 'font-bold text-red-400' : 'text-neutral-400'}`}>
                         {playerName(m.player2_id)}
                       </span>
-                      {p2w && <span className="text-[8px] text-red-500 ml-1">✓</span>}
+                      {p2w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
+                      {p2w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
+                    </div>
+                    <div className="px-3 py-1.5">
+                      <span className="text-[9px] text-neutral-600 font-mono">{slot}</span>
                     </div>
                   </div>
                 )

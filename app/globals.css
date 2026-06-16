@@ -110,3 +110,33 @@ input[type="checkbox"] {
 
 [data-theme="dark"] .sl-logo-text { display: inline; }
 [data-theme="dark"] .sl-logo-img  { display: none; }
+
+/* ── TD Dashboard: light theme overrides ──────────────────────────────── */
+/* Maps hardcoded dark Tailwind classes to light equivalents for [data-td-light] wrapper */
+[data-td-light] .bg-neutral-950 { background-color: #ffffff !important; }
+[data-td-light] .bg-neutral-900 { background-color: #f8f8f8 !important; }
+[data-td-light] .bg-neutral-800 { background-color: #f0f0f0 !important; }
+[data-td-light] .bg-neutral-800\/60 { background-color: rgba(240,240,240,0.6) !important; }
+[data-td-light] .border-neutral-800 { border-color: #e0e0e0 !important; }
+[data-td-light] .border-neutral-700 { border-color: #d0d0d0 !important; }
+[data-td-light] .text-neutral-100 { color: #111111 !important; }
+[data-td-light] .text-neutral-200 { color: #222222 !important; }
+[data-td-light] .text-neutral-400 { color: #666666 !important; }
+[data-td-light] .text-neutral-500 { color: #888888 !important; }
+[data-td-light] .text-neutral-600 { color: #aaaaaa !important; }
+[data-td-light] .text-neutral-700 { color: #bbbbbb !important; }
+[data-td-light] .placeholder-neutral-500::placeholder { color: #aaaaaa !important; }
+[data-td-light] input,
+[data-td-light] textarea,
+[data-td-light] select { color: #111111 !important; }
+[data-td-light] .hover\:text-white:hover { color: #111111 !important; }
+[data-td-light] .hover\:bg-neutral-700:hover { background-color: #e8e8e8 !important; }
+[data-td-light] .bg-red-900\/20 { background-color: rgba(220,38,38,0.08) !important; }
+[data-td-light] .bg-red-900\/40 { background-color: rgba(220,38,38,0.12) !important; }
+[data-td-light] .border-red-900\/50 { border-color: rgba(220,38,38,0.3) !important; }
+[data-td-light] .bg-black\/80 { background-color: rgba(0,0,0,0.7) !important; }
+[data-td-light] .bg-black\/70 { background-color: rgba(0,0,0,0.6) !important; }
+/* Keep status badge backgrounds */
+[data-td-light] .bg-green-900\/40 { background-color: rgba(22,163,74,0.1) !important; }
+[data-td-light] .bg-red-900\/40:not(.border-red-700):not(.text-red-400) { background-color: rgba(220,38,38,0.1) !important; }
+[data-td-light] .bg-amber-900\/10 { background-color: rgba(245,158,11,0.08) !important; }

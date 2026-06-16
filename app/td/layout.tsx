@@ -18,21 +18,21 @@ export default async function TDLayout({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
-      <nav className="border-b border-neutral-800 px-6 py-3 flex items-center justify-between sticky top-0 z-40 bg-neutral-950">
+    <div data-td-light className="min-h-screen bg-white text-neutral-900">
+      <nav className="border-b border-neutral-200 px-6 py-3 flex items-center justify-between sticky top-0 z-40 bg-white">
         <div className="flex items-center gap-6">
           <Link href="/td" className="flex items-center gap-2">
             <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" className="h-7 w-auto" />
           </Link>
-          <span className="text-neutral-700">|</span>
-          <Link href="/td" className="text-xs font-bold tracking-widest text-neutral-400 hover:text-white transition">
+          <span className="text-neutral-300">|</span>
+          <Link href="/td" className="text-xs font-bold tracking-widest text-neutral-600 hover:text-neutral-900 transition">
             MY TOURNAMENTS
           </Link>
-          <Link href="/td/tournaments/new" className="text-xs font-bold tracking-widest text-red-500 hover:text-red-400 transition">
+          <Link href="/td/tournaments/new" className="text-xs font-bold tracking-widest text-red-600 hover:text-red-500 transition">
             + NEW
           </Link>
         </div>
-        <Link href="/dashboard" className="text-xs text-neutral-500 hover:text-neutral-300 transition">
+        <Link href="/dashboard" className="text-xs text-neutral-500 hover:text-neutral-700 transition">
           Player Dashboard →
         </Link>
       </nav>
