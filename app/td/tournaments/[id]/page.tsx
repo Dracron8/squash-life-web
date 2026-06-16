@@ -201,7 +201,11 @@ export default function TournamentPage() {
       .eq('id', id)
       .single()
 
-    if (!t || (t as unknown as Tournament).td_id !== user.id) { router.push('/td'); return }
+    if (!t || (t as unknown as Tournament).td_id !== user.id) {
+      console.warn('Tournament not found or not owned by current user', { id, t })
+      router.push('/td')
+      return
+    }
     setTournament(t as unknown as Tournament)
 
     // 009: load persisted schedule_slots if present (JSON in tournament_details)
@@ -723,7 +727,7 @@ export default function TournamentPage() {
               <div className="mb-10">
                 <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">MAIN DRAW — {activeDivision}</p>
                 <div className="overflow-x-auto">
-                  <BracketView matches={mainMatches} maxRound={maxRound} playerName={playerName} />
+                  <BracketView matches={mainMatches} maxRound={maxRound} playerName={playerName} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
                 </div>
               </div>
             )}
@@ -731,7 +735,7 @@ export default function TournamentPage() {
               <div>
                 <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">PLATE DRAW — {activeDivision}</p>
                 <div className="overflow-x-auto">
-                  <BracketView matches={plateMatches} maxRound={Math.max(...plateMatches.map(m => m.round_number))} playerName={playerName} />
+                  <BracketView matches={plateMatches} maxRound={Math.max(...plateMatches.map(m => m.round_number))} playerName={playerName} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
                 </div>
               </div>
             )}
@@ -1067,10 +1071,11 @@ function SettCheck({ value, onChange, label }: { value: boolean; onChange: (v: b
 
 // ─── Bracket View ─────────────────────────────────────────────────────────────
 
-function BracketView({ matches, maxRound, playerName }: {
+function BracketView({ matches, maxRound, playerName, onMatchTap }: {
   matches: Match[]
   maxRound: number
   playerName: (id: string | null) => string
+  onMatchTap?: (match: Match) => void
 }) {
   const rounds: Match[][] = []
   for (let r = 1; r <= maxRound; r++) {
@@ -1089,8 +1094,15 @@ function BracketView({ matches, maxRound, playerName }: {
               {roundMatches.map(m => {
                 const p1w = m.winner_id === m.player1_id
                 const p2w = m.winner_id === m.player2_id
+                const canTap = onMatchTap && (m.player1_id || m.player2_id)
                 return (
-                  <div key={m.id} className={`w-44 bg-neutral-900 border rounded-xl overflow-hidden ${m.winner_id ? 'border-red-900/50' : 'border-neutral-800'}`}>
+                  <div
+                    key={m.id}
+                    onClick={canTap ? () => onMatchTap(m) : undefined}
+                    className={`w-44 bg-neutral-900 border rounded-xl overflow-hidden transition ${
+                      m.winner_id ? 'border-red-900/50' : 'border-neutral-800'
+                    } ${canTap ? 'cursor-pointer hover:border-red-600/60 hover:bg-neutral-800/60' : ''}`}
+                  >
                     <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p1w ? 'bg-red-900/20' : ''}`}>
                       <span className={`text-xs truncate max-w-[7rem] ${p1w ? 'font-bold text-red-400' : !m.player1_id ? 'italic text-neutral-700' : 'text-neutral-400'}`}>
                         {playerName(m.player1_id)}
