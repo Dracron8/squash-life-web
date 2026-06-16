@@ -5,6 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { reconstructDaySchedules, generateBasicSchedule, type ScheduleSlot } from '@/lib/td/flutterParity'
+import { generateBracketAndSchedule } from '@/lib/td/drawGenerator'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -297,12 +298,13 @@ export default function TournamentPage() {
     setGeneratingDraw(true)
     setError(null)
     const supabase = createClient()
-    const { error: rpcErr } = await supabase.rpc('generate_tournament_draw', {
-      t_id: tournament.id,
-      format: tournament.draw_type,
-      force_reset: forceReset,
-    })
-    if (rpcErr) { setError(rpcErr.message); setGeneratingDraw(false); return }
+    const { error: genErr } = await generateBracketAndSchedule(
+      supabase,
+      tournament.id,
+      tournament.draw_type,
+      forceReset,
+    )
+    if (genErr) { setError(genErr); setGeneratingDraw(false); return }
     await fetchAll()
     setGeneratingDraw(false)
   }
