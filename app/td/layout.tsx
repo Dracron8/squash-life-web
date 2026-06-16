@@ -6,7 +6,7 @@ import Image from 'next/image'
 export default async function TDLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login?next=/td')
+  if (!user) redirect('/login')
 
   const { data: profile } = await supabase
     .from('profiles')
