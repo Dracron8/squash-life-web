@@ -27,14 +27,21 @@ const STATUS_LABEL: Record<string, string> = {
   setup_pending:     'SETUP',
   registration_open: 'OPEN',
   active:            'ACTIVE',
-  completed:         'COMPLETED',
+  completed:         'DONE',
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  setup_pending:     'bg-neutral-800 text-neutral-400 border-neutral-700',
-  registration_open: 'bg-green-900/40 text-green-400 border-green-700/40',
-  active:            'bg-red-900/40 text-red-400 border-red-700/40',
-  completed:         'bg-neutral-800 text-neutral-500 border-neutral-700',
+const STATUS_BADGE: Record<string, string> = {
+  setup_pending:     'bg-gray-100 text-gray-500 border border-gray-200',
+  registration_open: 'bg-green-50 text-green-700 border border-green-200',
+  active:            'bg-red-600 text-white border border-red-600',
+  completed:         'bg-gray-50 text-gray-400 border border-gray-200',
+}
+
+const ACCENT_BAR: Record<string, string> = {
+  setup_pending:     'bg-gray-200',
+  registration_open: 'bg-green-400',
+  active:            'bg-red-600',
+  completed:         'bg-gray-200',
 }
 
 export default async function TDDashboard() {
@@ -50,7 +57,6 @@ export default async function TDDashboard() {
 
   const list = (tournaments ?? []) as unknown as Tournament[]
 
-  // Fetch registration counts per tournament
   const ids = list.map(t => t.id)
   const regCounts: Record<string, number> = {}
   if (ids.length > 0) {
@@ -64,64 +70,98 @@ export default async function TDDashboard() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-10">
-      <div className="flex items-center justify-between mb-8">
+    <div className="max-w-4xl mx-auto px-6 py-12">
+
+      {/* ── Page header ── */}
+      <div className="flex items-end justify-between mb-10 gap-4">
         <div>
-          <p className="text-xs font-bold tracking-widest text-neutral-500 uppercase mb-1">Tournament Director</p>
-          <h1 className="text-2xl font-bold tracking-wide">My Tournaments</h1>
+          <p className="text-xs font-black tracking-[0.2em] text-red-600 uppercase mb-2">
+            Tournament Director
+          </p>
+          <h1 className="text-[2.75rem] font-black tracking-tight text-gray-900 leading-none">
+            My Tournaments
+          </h1>
         </div>
         <Link
           href="/td/tournaments/new"
-          className="bg-red-700 hover:bg-red-600 text-white text-xs font-bold tracking-widest px-5 py-2.5 rounded-xl transition"
+          className="shrink-0 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-black tracking-widest text-sm px-7 py-3.5 rounded-2xl transition-colors shadow-lg shadow-red-600/25"
         >
           + CREATE TOURNAMENT
         </Link>
       </div>
 
+      {/* ── Empty state ── */}
       {list.length === 0 ? (
-        <div className="border border-dashed border-neutral-800 rounded-2xl py-20 text-center">
-          <p className="text-neutral-500 text-sm mb-4">No tournaments yet.</p>
+        <div className="border-2 border-dashed border-gray-200 rounded-3xl py-28 text-center">
+          <p className="text-3xl font-black text-gray-200 mb-3">No tournaments yet</p>
+          <p className="text-gray-400 text-sm mb-10">Create your first tournament to get started.</p>
           <Link
             href="/td/tournaments/new"
-            className="bg-red-700 hover:bg-red-600 text-white text-xs font-bold tracking-widest px-6 py-3 rounded-xl transition"
+            className="bg-red-600 hover:bg-red-700 text-white font-black tracking-widest text-sm px-8 py-4 rounded-2xl transition-colors inline-block shadow-lg shadow-red-600/25"
           >
             CREATE YOUR FIRST TOURNAMENT
           </Link>
         </div>
       ) : (
-        <div className="grid gap-3">
+        <div className="space-y-3">
           {list.map(t => {
             const detail = t.tournament_details?.[0]
             const count = regCounts[t.id] ?? 0
             const dateStr = fmtListDate(detail?.start_date, detail?.end_date)
+
             return (
               <div
                 key={t.id}
-                className="bg-neutral-900 border border-neutral-800 rounded-2xl p-5 hover:border-neutral-600 transition"
+                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <Link
-                    href={`/td/tournaments/${t.id}`}
-                    className="flex-1 min-w-0 block"
-                  >
-                    <h2 className="font-bold text-sm tracking-wide truncate hover:text-red-400 transition">{t.name}</h2>
-                    <p className="text-neutral-500 text-xs mt-1">
-                      {detail?.clubs?.name ?? 'Venue TBD'}
-                      {detail?.clubs?.city ? ` · ${detail.clubs.city}` : ''}
-                      {dateStr ? ` · ${dateStr}` : ''}
-                    </p>
-                    <p className="text-neutral-600 text-xs mt-1">{count} registered · {t.draw_type}</p>
-                  </Link>
-                  <div className="flex flex-col items-end gap-2 shrink-0">
-                    <span className={`text-[10px] font-bold tracking-widest px-2.5 py-1 rounded border ${STATUS_COLOR[t.status] ?? STATUS_COLOR.setup_pending}`}>
-                      {STATUS_LABEL[t.status] ?? t.status.toUpperCase()}
-                    </span>
+                <div className="flex">
+                  {/* Left accent bar */}
+                  <div className={`w-1 flex-shrink-0 ${ACCENT_BAR[t.status] ?? ACCENT_BAR.setup_pending}`} />
+
+                  <div className="flex-1 flex items-center gap-4 px-6 py-5 min-w-0">
+                    {/* Tournament info — links to detail page */}
                     <Link
-                      href={`/td/tournaments/new?edit=${t.id}`}
-                      className="text-[10px] font-bold tracking-widest text-red-400 border border-red-800 hover:bg-red-900/30 px-3 py-1 rounded-lg transition"
+                      href={`/td/tournaments/${t.id}`}
+                      className="flex-1 min-w-0 block group"
                     >
-                      EDIT SETUP
+                      <h2 className="text-base font-black text-gray-900 group-hover:text-red-600 transition-colors leading-snug truncate">
+                        {t.name}
+                      </h2>
+                      <div className="flex flex-wrap items-center gap-x-2 mt-1.5 text-sm text-gray-500">
+                        {detail?.clubs?.name && (
+                          <span className="font-semibold text-gray-700">{detail.clubs.name}</span>
+                        )}
+                        {detail?.clubs?.city && (
+                          <span className="text-gray-400">{detail.clubs.city}</span>
+                        )}
+                        {dateStr && (
+                          <>
+                            <span className="text-gray-200 select-none">·</span>
+                            <span>{dateStr}</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-1.5">
+                        <span className="text-xs text-gray-400">{t.draw_type}</span>
+                        <span className="text-gray-200 select-none">·</span>
+                        <span className="text-xs font-bold text-gray-500">
+                          {count} player{count !== 1 ? 's' : ''}
+                        </span>
+                      </div>
                     </Link>
+
+                    {/* Status badge + edit button */}
+                    <div className="flex flex-col items-end gap-2 shrink-0">
+                      <span className={`text-[10px] font-black tracking-widest px-2.5 py-1 rounded-lg ${STATUS_BADGE[t.status] ?? STATUS_BADGE.setup_pending}`}>
+                        {STATUS_LABEL[t.status] ?? t.status.toUpperCase()}
+                      </span>
+                      <Link
+                        href={`/td/tournaments/new?edit=${t.id}`}
+                        className="text-[10px] font-bold tracking-widest text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                      >
+                        EDIT SETUP
+                      </Link>
+                    </div>
                   </div>
                 </div>
               </div>

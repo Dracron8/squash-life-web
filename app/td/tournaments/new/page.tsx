@@ -254,13 +254,17 @@ export default function NewTournamentPage() {
         .eq('id', user.id)
         .maybeSingle()
       if (!profile) return
-      setForm(prev => ({
-        ...prev,
-        venue_name: prev.venue_name || profile.club_name || '',
-        venue_city: prev.venue_city || profile.club_city || '',
-        venue_province: prev.venue_province || profile.club_province || '',
-        venue_country: prev.venue_country || profile.club_country || 'Canada',
-      }))
+      // Always apply profile data for club fields — profile is authoritative for pre-fill.
+      // Do not use prev.venue_X || guard: stale localStorage values must not block pre-fill.
+      if (profile.club_name || profile.club_city || profile.club_province || profile.club_country) {
+        setForm(prev => ({
+          ...prev,
+          venue_name: profile.club_name || '',
+          venue_city: profile.club_city || '',
+          venue_province: profile.club_province || '',
+          venue_country: profile.club_country || 'Canada',
+        }))
+      }
     })()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editId])

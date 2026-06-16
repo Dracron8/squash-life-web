@@ -388,13 +388,14 @@ async function scheduleAllMatches(
     }
   }
 
-  // Fetch match IDs + player IDs ordered by round ASC, draw_segment DESC (main > plate)
+  // Fetch match IDs + player IDs ordered by round ASC, draw_segment ASC (main before plate)
+  // 'main' < 'plate' alphabetically, so ASC gives main first within each round.
   const { data: matchList, error: matchErr } = await supabase
     .from('matches')
     .select('id, player1_id, player2_id')
     .eq('tournament_id', tournamentId)
     .order('round_number', { ascending: true })
-    .order('draw_segment', { ascending: false })
+    .order('draw_segment', { ascending: true })
 
   if (matchErr) return matchErr.message
   if (!matchList || matchList.length === 0) return null

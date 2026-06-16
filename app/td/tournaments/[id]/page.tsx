@@ -640,22 +640,21 @@ export default function TournamentPage() {
               return (
                 <div>
                   {/* Division title */}
-                  <h2 className="text-2xl font-bold underline text-center mb-6 text-neutral-100">
-                    DIVISION {activeDivision} — {activeDraw === 'main' ? 'MAIN DRAW' : 'PLATE DRAW'}
-                  </h2>
-                  {/* Plate / Main toggle */}
-                  <div className="mb-6">
+                  <div className="flex items-center justify-between mb-6 gap-4">
+                    <h2 className="text-lg font-black tracking-widest text-gray-900 uppercase">
+                      Division {activeDivision} &mdash; {activeDraw === 'main' ? 'Main Draw' : 'Plate Draw'}
+                    </h2>
                     {activeDraw === 'main' && plateMatches.length > 0 && (
                       <button
                         onClick={() => setActiveDraw('plate')}
-                        className="text-xs font-bold tracking-widest px-5 py-2.5 rounded-xl border border-red-800 text-red-400 hover:bg-red-900/30 transition">
+                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 transition shrink-0">
                         PLATE DRAW →
                       </button>
                     )}
                     {activeDraw === 'plate' && (
                       <button
                         onClick={() => setActiveDraw('main')}
-                        className="text-xs font-bold tracking-widest px-5 py-2.5 rounded-xl border border-red-800 text-red-400 hover:bg-red-900/30 transition">
+                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition shrink-0">
                         ← MAIN DRAW
                       </button>
                     )}
@@ -981,14 +980,16 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
   const canTap = onMatchTap && (m.player1_id || m.player2_id)
   const slot = fmtCourtTime(m)
 
-  function renderName(uid: string | null, isWinner: boolean) {
+  function renderPlayer(uid: string | null, isWinner: boolean) {
     const isMe = uid !== null && uid === loggedInUserId
     if (uid === null) {
-      return <span className="text-[10px] text-neutral-600 lowercase">tbd</span>
+      return <span className="text-[10px] italic text-gray-300">tbd</span>
     }
     const name = playerMap[uid] ?? uid.slice(0, 8) + '…'
     return (
-      <span className={`text-xs truncate ${isWinner ? 'text-red-400' : 'text-neutral-300'} ${isMe ? 'font-bold' : 'font-normal'}`}>
+      <span className={`text-[11px] truncate max-w-[130px] inline-block ${
+        isWinner ? 'text-red-600 font-bold' : 'text-gray-700 font-medium'
+      } ${isMe ? 'font-black' : ''}`}>
         {name}
       </span>
     )
@@ -997,23 +998,32 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
   return (
     <div
       onClick={canTap ? () => onMatchTap!(m) : undefined}
-      className={`w-44 bg-neutral-900 border rounded-xl overflow-hidden transition ${
-        m.winner_id ? 'border-red-900/50' : 'border-neutral-800'
-      } ${canTap ? 'cursor-pointer hover:border-red-600/60 hover:bg-neutral-800/60' : ''}`}
+      className={`w-44 bg-white rounded-xl overflow-hidden transition ${
+        m.winner_id ? 'ring-1 ring-red-100 shadow-sm' : 'ring-1 ring-gray-100 shadow-sm'
+      } ${canTap ? 'cursor-pointer hover:shadow-md hover:ring-red-300' : ''}`}
     >
-      <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p1w ? 'bg-red-900/20' : ''}`}>
-        {renderName(m.player1_id, p1w)}
-        {p1w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
-        {p1w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
+      {/* Player 1 */}
+      <div className={`flex items-center justify-between px-3 py-2.5 border-b border-gray-50 ${p1w ? 'bg-red-50' : 'bg-white'}`}>
+        {renderPlayer(m.player1_id, p1w)}
+        <div className="flex items-center gap-1 ml-1 shrink-0">
+          {p1w && m.score && <span className="text-[9px] text-gray-400 font-mono">{m.score}</span>}
+          {p1w && !m.score && <span className="text-[10px] text-red-500 font-bold">✓</span>}
+        </div>
       </div>
-      <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p2w ? 'bg-red-900/20' : ''}`}>
-        {renderName(m.player2_id, p2w)}
-        {p2w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
-        {p2w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
+      {/* Player 2 */}
+      <div className={`flex items-center justify-between px-3 py-2.5 ${p2w ? 'bg-red-50' : 'bg-white'}`}>
+        {renderPlayer(m.player2_id, p2w)}
+        <div className="flex items-center gap-1 ml-1 shrink-0">
+          {p2w && m.score && <span className="text-[9px] text-gray-400 font-mono">{m.score}</span>}
+          {p2w && !m.score && <span className="text-[10px] text-red-500 font-bold">✓</span>}
+        </div>
       </div>
-      <div className="px-3 py-1.5">
-        <span className="text-[9px] text-neutral-600 font-mono">{slot}</span>
-      </div>
+      {/* Court / time footer */}
+      {slot && (
+        <div className="px-3 py-1.5 border-t border-gray-100 bg-gray-50">
+          <span className="text-[9px] text-gray-400 font-mono tracking-wide">{slot}</span>
+        </div>
+      )}
     </div>
   )
 }
@@ -1023,6 +1033,65 @@ function roundLabel(rn: number, maxRound: number): string {
   if (rn === maxRound - 1) return 'SEMI-FINAL'
   if (rn === maxRound - 2) return 'QUARTER-FINAL'
   return `ROUND ${rn}`
+}
+
+/** SVG connector column between two adjacent bracket columns.
+ *  leftCount: cards in the left (source) column
+ *  rightCount: cards in the right (dest) column
+ *  colH: height of the card area (excludes label)
+ *  LABEL_H: height reserved for round label above card area
+ */
+function BracketConnector({ leftCount, rightCount, colH }: {
+  leftCount: number
+  rightCount: number
+  colH: number
+}) {
+  const W = 20
+  const LABEL_H = 22
+
+  const bigCount = Math.max(leftCount, rightCount)
+  const smallCount = Math.min(leftCount, rightCount)
+  const bigSlotH = colH / bigCount
+  const smallSlotH = colH / smallCount
+
+  const lines: string[] = []
+
+  if (leftCount >= rightCount) {
+    // Converge: many cards on left → fewer on right
+    for (let i = 0; i < smallCount; i++) {
+      const y1 = (2 * i + 0.5) * bigSlotH      // left card 2i centre
+      const y2 = (2 * i + 1.5) * bigSlotH      // left card 2i+1 centre
+      const ym = (i + 0.5) * smallSlotH         // right card i centre
+      lines.push(`M0,${y1} H${W / 2} V${ym} H${W}`)
+      lines.push(`M0,${y2} H${W / 2} V${ym}`)
+    }
+    // Odd leftCount: last card has no pair, run straight across
+    if (leftCount % 2 !== 0) {
+      const y = (leftCount - 0.5) * bigSlotH
+      lines.push(`M0,${y} H${W}`)
+    }
+  } else {
+    // Diverge: fewer cards on left → more on right
+    for (let i = 0; i < smallCount; i++) {
+      const ym = (i + 0.5) * smallSlotH         // left card i centre
+      const y1 = (2 * i + 0.5) * bigSlotH      // right card 2i centre
+      const y2 = (2 * i + 1.5) * bigSlotH      // right card 2i+1 centre
+      lines.push(`M0,${ym} H${W / 2} V${y1} H${W}`)
+      lines.push(`M${W / 2},${ym} V${y2} H${W}`)
+    }
+  }
+
+  return (
+    <div className="flex flex-col flex-shrink-0">
+      <div style={{ height: LABEL_H }} />
+      <svg width={W} height={colH} style={{ display: 'block' }}>
+        {lines.map((d, i) => (
+          <path key={i} d={d} stroke="#cbd5e1" strokeWidth="1.5" fill="none"
+            strokeLinecap="round" strokeLinejoin="round" />
+        ))}
+      </svg>
+    </div>
+  )
 }
 
 function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMatchTap }: {
@@ -1041,8 +1110,8 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
   const finalMatches = rounds[maxRound - 1] ?? []
 
   // Split each round (except final) into top/bottom halves
-  const leftCols: { rn: number; matches: Match[] }[] = []   // R1→SEMI, top half (outermost first)
-  const rightCols: { rn: number; matches: Match[] }[] = []  // SEMI→R1, bottom half (innermost first)
+  const leftCols: { rn: number; matches: Match[] }[] = []
+  const rightCols: { rn: number; matches: Match[] }[] = []
 
   for (let r = 1; r < maxRound; r++) {
     const rMatches = rounds[r - 1]
@@ -1055,17 +1124,17 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
     rightCols.push({ rn: r, matches: rMatches.slice(half) })
   }
 
-  // Column height: sized so R1 top (largest column) has nice spacing per card
-  const slotH = 112 // px per slot (card ~88px + ~24px gap)
+  // Column height: sized for R1 top (largest column) with generous per-card spacing
+  const slotH = 116 // px per slot (card ~88px + gap)
   const r1TopCount = leftCols.length > 0 ? leftCols[0].matches.length : 1
   const colH = r1TopCount * slotH
 
-  const labelCls = 'text-[9px] font-bold tracking-widest text-neutral-600 text-center mb-2 px-1 whitespace-nowrap'
+  const labelCls = 'text-[9px] font-bold tracking-widest text-gray-400 text-center mb-0.5 px-1 whitespace-nowrap uppercase'
 
   function renderCol(rn: number, colMatches: Match[]) {
     return (
-      <div key={rn} className="flex flex-col">
-        <div className={labelCls}>{roundLabel(rn, maxRound)}</div>
+      <div className="flex flex-col flex-shrink-0">
+        <div className={labelCls} style={{ height: 22 }}>{roundLabel(rn, maxRound)}</div>
         <div className="flex flex-col justify-around" style={{ height: colH }}>
           {colMatches.map(m => (
             <MatchCard key={m.id} m={m} playerMap={playerMap} loggedInUserId={loggedInUserId} onMatchTap={onMatchTap} />
@@ -1076,13 +1145,23 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
   }
 
   return (
-    <div className="flex gap-3 items-start pb-4" style={{ minWidth: 'max-content' }}>
-      {/* Left arm: outermost → inward */}
-      {leftCols.map(({ rn, matches: cm }) => renderCol(rn, cm))}
+    <div className="flex items-start pb-6" style={{ minWidth: 'max-content' }}>
+      {/* Left arm: outermost → inward, with connectors */}
+      {leftCols.map(({ rn, matches: cm }, idx) => (
+        <React.Fragment key={rn}>
+          {renderCol(rn, cm)}
+          {/* Connector to next left column or to FINAL */}
+          {idx < leftCols.length - 1 ? (
+            <BracketConnector leftCount={cm.length} rightCount={leftCols[idx + 1].matches.length} colH={colH} />
+          ) : (
+            <BracketConnector leftCount={cm.length} rightCount={finalMatches.length} colH={colH} />
+          )}
+        </React.Fragment>
+      ))}
 
       {/* Centre: FINAL */}
-      <div className="flex flex-col">
-        <div className={labelCls}>FINAL</div>
+      <div className="flex flex-col flex-shrink-0">
+        <div className={labelCls} style={{ height: 22 }}>FINAL</div>
         <div className="flex flex-col justify-around" style={{ height: colH }}>
           {finalMatches.map(m => (
             <MatchCard key={m.id} m={m} playerMap={playerMap} loggedInUserId={loggedInUserId} onMatchTap={onMatchTap} />
@@ -1090,8 +1169,20 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
         </div>
       </div>
 
-      {/* Right arm: inward → outermost */}
-      {rightCols.map(({ rn, matches: cm }) => renderCol(rn, cm))}
+      {/* Connector from FINAL to right arm */}
+      {rightCols.length > 0 && (
+        <BracketConnector leftCount={finalMatches.length} rightCount={rightCols[0].matches.length} colH={colH} />
+      )}
+
+      {/* Right arm: inward → outermost, with connectors */}
+      {rightCols.map(({ rn, matches: cm }, idx) => (
+        <React.Fragment key={rn}>
+          {renderCol(rn, cm)}
+          {idx < rightCols.length - 1 && (
+            <BracketConnector leftCount={cm.length} rightCount={rightCols[idx + 1].matches.length} colH={colH} />
+          )}
+        </React.Fragment>
+      ))}
     </div>
   )
 }
@@ -1103,20 +1194,23 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
   const [pan, setPan] = React.useState({ x: 0, y: 0 })
   const dragging = React.useRef(false)
   const lastMouse = React.useRef({ x: 0, y: 0 })
-  const naturalH = React.useRef(0)
+  // Fixed container height set once on mount — must NOT scale with zoom to prevent page scroll
+  const [containerH, setContainerH] = React.useState<number | 'auto'>('auto')
 
   React.useLayoutEffect(() => {
     if (!outerRef.current || !innerRef.current) return
     const availW = outerRef.current.clientWidth
     const contentW = innerRef.current.scrollWidth
     const contentH = innerRef.current.scrollHeight
-    naturalH.current = contentH
     if (contentW > availW && contentW > 0) {
-      setScale(availW / contentW)
+      const initialScale = availW / contentW
+      setScale(initialScale)
+      // Fix container height at initial fit — zoom changes scale but not outer height
+      setContainerH(Math.ceil(contentH * initialScale) + 32)
+    } else {
+      setContainerH(contentH + 32)
     }
   }, [])
-
-  const containerH = naturalH.current > 0 ? Math.ceil(naturalH.current * scale) + 32 : 'auto'
 
   function onWheel(e: React.WheelEvent) {
     e.preventDefault()
