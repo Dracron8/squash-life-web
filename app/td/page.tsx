@@ -143,8 +143,9 @@ export default async function TDDashboard() {
                 key={t.id}
                 style={{
                   background: '#ffffff',
-                  borderRadius: 12,
-                  boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
+                  borderRadius: 0,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                  border: '1px solid #000000',
                   borderLeft: '4px solid var(--sl-accent)',
                   padding: '20px 24px',
                   display: 'flex',
@@ -157,19 +158,21 @@ export default async function TDDashboard() {
                   href={`/td/tournaments/${t.id}`}
                   style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}
                 >
-                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--sl-text)', marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
+                  <div style={{ fontSize: 20, fontWeight: 900, color: '#000000', marginBottom: 6, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                     {t.name}
                   </div>
-                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sl-text-50)', marginBottom: 4 }}>
-                    {detail?.clubs?.name ?? 'Venue TBD'}
-                    {detail?.clubs?.city ? ` · ${detail.clubs.city}` : ''}
-                    {dateStr ? ` · ${dateStr}` : ''}
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#000000', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {dateStr && (
+                      <span style={{ color: 'var(--sl-accent)', fontWeight: 800 }}>{dateStr}</span>
+                    )}
+                    {dateStr && (detail?.clubs?.name ?? 'Venue TBD') && <span style={{ color: '#cccccc' }}>·</span>}
+                    <span>{detail?.clubs?.name ?? 'Venue TBD'}{detail?.clubs?.city ? `, ${detail.clubs.city}` : ''}</span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: 11, color: 'var(--sl-text-30)' }}>
-                      {count} registered
+                    <span style={{ fontSize: 11, fontWeight: 700, color: count > 0 ? '#000000' : '#aaaaaa' }}>
+                      {count > 0 ? <><span style={{ color: 'var(--sl-accent)', fontWeight: 900 }}>{count}</span> players</> : 'No registrations'}
                     </span>
-                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--sl-accent)', background: 'var(--sl-accent-10)', padding: '2px 8px', borderRadius: 4 }}>
+                    <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#ffffff', background: '#000000', padding: '2px 8px', borderRadius: 999 }}>
                       {t.draw_type}
                     </span>
                   </div>
@@ -182,10 +185,11 @@ export default async function TDDashboard() {
                       fontSize: 10,
                       fontWeight: 700,
                       letterSpacing: '0.08em',
-                      color: 'var(--sl-accent)',
-                      border: '1px solid var(--sl-accent)',
-                      borderRadius: 6,
-                      padding: '4px 12px',
+                      color: '#ffffff',
+                      background: '#000000',
+                      border: '1px solid #000000',
+                      borderRadius: 0,
+                      padding: '5px 12px',
                       textDecoration: 'none',
                       display: 'inline-block',
                     }}

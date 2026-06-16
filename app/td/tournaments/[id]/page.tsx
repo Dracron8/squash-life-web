@@ -395,17 +395,18 @@ export default function TournamentPage() {
           {TABS.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
               style={{
-                padding: '10px 18px',
-                fontSize: 12,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
+                padding: '12px 20px',
+                fontSize: 11,
+                fontWeight: 900,
+                letterSpacing: '0.1em',
                 border: 'none',
-                borderBottom: activeTab === tab ? '2px solid var(--sl-accent)' : '2px solid transparent',
+                borderBottom: activeTab === tab ? '3px solid var(--sl-accent)' : '3px solid transparent',
                 marginBottom: -1,
                 background: 'none',
-                color: activeTab === tab ? 'var(--sl-accent)' : 'var(--sl-text-50)',
+                color: activeTab === tab ? 'var(--sl-accent)' : '#000000',
                 cursor: 'pointer',
                 transition: 'color 0.15s',
+                textTransform: 'uppercase',
               }}>
               {tab}
             </button>
@@ -809,8 +810,8 @@ function OverviewTab({
   detail: TournamentDetail | null
   registrationCount: number
 }) {
-  const sCls = 'bg-[var(--sl-surface)] border border-[var(--sl-border)] rounded-2xl p-5 space-y-1'
-  const hCls = 'text-[11px] font-bold tracking-widest text-[var(--sl-accent)] uppercase mb-3'
+  const sCls = 'bg-white border border-black p-5 space-y-1'
+  const hCls = 'text-[10px] font-black tracking-widest text-[var(--sl-accent)] uppercase mb-3 pb-2 border-b border-black'
 
   const days =
     detail?.start_date && detail?.end_date
@@ -1031,32 +1032,46 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
   function renderRow(uid: string | null, isWinner: boolean, isByeSlot: boolean = false) {
     const isMe = uid !== null && uid === loggedInUserId
     const nameStr = uid === null ? null : (playerMap[uid] ?? uid.slice(0, 8) + '…')
-    const emptyLabel = isByeSlot ? 'BYE' : 'tbd'
+
+    if (isByeSlot) {
+      return (
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '7px 10px', background: '#000000', minHeight: 34, minWidth: 0,
+        }}>
+          <span style={{ flex: 1 }} />
+          <span style={{
+            fontSize: 9, fontWeight: 700, letterSpacing: '0.06em',
+            color: '#ffffff', background: '#000000',
+            border: '1px solid rgba(255,255,255,0.25)',
+            borderRadius: 999, padding: '2px 8px', flexShrink: 0,
+          }}>BYE</span>
+        </div>
+      )
+    }
+
     return (
       <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '7px 10px',
-        background: isWinner ? 'var(--sl-accent)' : '#ffffff',
-        minHeight: 34,
-        minWidth: 0,
+        background: isWinner ? '#fa0000' : '#000000',
+        minHeight: 34, minWidth: 0,
       }}>
         <span style={{
-          flex: 1,
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
-          fontSize: 12,
-          fontWeight: isWinner ? 700 : (isMe ? 700 : 400),
-          color: isWinner ? '#ffffff' : (nameStr ? 'var(--sl-text)' : 'var(--sl-text-30)'),
+          flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          fontSize: 12, fontWeight: isWinner || isMe ? 700 : 400,
+          color: nameStr ? '#ffffff' : 'rgba(255,255,255,0.3)',
           fontStyle: nameStr ? 'normal' : 'italic',
           fontFamily: "'Assistant', sans-serif",
         }}>
-          {nameStr ?? emptyLabel}
+          {nameStr ?? 'tbd'}
         </span>
         {isWinner && m.score && (
-          <span style={{ fontSize: 10, color: '#ffffff', marginLeft: 6, whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.85 }}>
+          <span style={{
+            fontSize: 10, fontWeight: 700, color: '#ffffff',
+            background: '#000000', borderRadius: 999,
+            padding: '2px 7px', marginLeft: 6, whiteSpace: 'nowrap', flexShrink: 0,
+          }}>
             {m.score}
           </span>
         )}
@@ -1069,13 +1084,13 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
       onClick={canTap ? () => onMatchTap!(m) : undefined}
       style={{
         minWidth: 180,
-        border: '1px solid var(--sl-border)',
-        borderRadius: 8,
+        border: '1px solid #000000',
+        borderRadius: 0,
         overflow: 'hidden',
-        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         display: 'flex',
         cursor: canTap ? 'pointer' : 'default',
-        background: '#ffffff',
+        background: '#000000',
         transition: 'box-shadow 0.15s',
       }}
     >
@@ -1083,8 +1098,8 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
       {(court || time) && (
         <div style={{
           width: 48,
-          background: 'var(--sl-surface)',
-          borderRight: '1px solid var(--sl-border)',
+          background: '#1a1a1a',
+          borderRight: '1px solid #333333',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -1099,7 +1114,7 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
               fontWeight: 700,
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
-              color: 'var(--sl-text-30)',
+              color: 'rgba(255,255,255,0.4)',
               lineHeight: 1.2,
               textAlign: 'center',
             }}>{court}</span>
@@ -1108,7 +1123,7 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
             <span style={{
               fontSize: 11,
               fontWeight: 600,
-              color: 'var(--sl-text-50)',
+              color: 'rgba(255,255,255,0.65)',
               lineHeight: 1.2,
               textAlign: 'center',
             }}>{time}</span>
@@ -1118,7 +1133,7 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
       {/* Player rows */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         {renderRow(m.player1_id, p1w, isByeMatch && m.player1_id === null)}
-        <div style={{ height: 1, background: 'var(--sl-border)', flexShrink: 0 }} />
+        <div style={{ height: 1, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
         {renderRow(m.player2_id, p2w, isByeMatch && m.player2_id === null)}
       </div>
     </div>
@@ -1183,7 +1198,7 @@ function BracketConnector({ leftCount, rightCount, colH }: {
       <div style={{ height: LABEL_H }} />
       <svg width={W} height={colH} style={{ display: 'block' }}>
         {lines.map((d, i) => (
-          <path key={i} d={d} stroke="var(--sl-border)" strokeWidth="1" fill="none"
+          <path key={i} d={d} stroke="#fa0000" strokeWidth="1.5" fill="none"
             strokeLinecap="round" strokeLinejoin="round" />
         ))}
       </svg>
@@ -1226,12 +1241,12 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
   const r1TopCount = leftCols.length > 0 ? leftCols[0].matches.length : 1
   const colH = r1TopCount * slotH
 
-  const labelCls = 'text-[9px] font-bold tracking-widest text-center mb-0.5 px-1 whitespace-nowrap uppercase'
+  const labelCls = 'text-[9px] font-black tracking-widest text-center mb-0.5 px-1 whitespace-nowrap uppercase'
 
   function renderCol(rn: number, colMatches: Match[]) {
     return (
       <div className="flex flex-col flex-shrink-0">
-        <div className={labelCls} style={{ height: 22, color: 'var(--sl-text-30)' }}>{roundLabel(rn, maxRound)}</div>
+        <div className={labelCls} style={{ height: 22, color: '#fa0000' }}>{roundLabel(rn, maxRound)}</div>
         <div className="flex flex-col justify-around" style={{ height: colH }}>
           {colMatches.map(m => (
             <MatchCard key={m.id} m={m} playerMap={playerMap} loggedInUserId={loggedInUserId} onMatchTap={onMatchTap} />
@@ -1258,7 +1273,7 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
 
       {/* Centre: FINAL */}
       <div className="flex flex-col flex-shrink-0">
-        <div className={labelCls} style={{ height: 22 }}>FINAL</div>
+        <div className={labelCls} style={{ height: 22, color: '#fa0000' }}>FINAL</div>
         <div className="flex flex-col justify-around" style={{ height: colH }}>
           {finalMatches.map(m => (
             <MatchCard key={m.id} m={m} playerMap={playerMap} loggedInUserId={loggedInUserId} onMatchTap={onMatchTap} />
@@ -1287,13 +1302,21 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
 function ZoomPanBracket({ children }: { children: React.ReactNode }) {
   const outerRef = React.useRef<HTMLDivElement>(null)
   const innerRef = React.useRef<HTMLDivElement>(null)
-  const [scale, setScale] = React.useState(1)
-  const [pan, setPan] = React.useState({ x: 0, y: 0 })
+  // Track transform in refs to avoid re-render lag during drag/zoom
+  const scaleRef = React.useRef(1)
+  const txRef = React.useRef(0)
+  const tyRef = React.useRef(0)
+  const minScaleRef = React.useRef(1)
   const dragging = React.useRef(false)
   const lastMouse = React.useRef({ x: 0, y: 0 })
-  const minScale = React.useRef(1)
   const [containerH, setContainerH] = React.useState<number | 'auto'>('auto')
   const [isDragging, setIsDragging] = React.useState(false)
+
+  function applyTransform() {
+    if (!innerRef.current) return
+    innerRef.current.style.transform =
+      `translate(${txRef.current}px, ${tyRef.current}px) scale(${scaleRef.current})`
+  }
 
   React.useLayoutEffect(() => {
     if (!outerRef.current || !innerRef.current) return
@@ -1302,22 +1325,24 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
     const contentH = innerRef.current.scrollHeight
     if (contentW > availW && contentW > 0) {
       const initialScale = availW / contentW
-      minScale.current = initialScale
-      setScale(initialScale)
+      minScaleRef.current = initialScale
+      scaleRef.current = initialScale
+      applyTransform()
       setContainerH(Math.ceil(contentH * initialScale) + 32)
     } else {
       setContainerH(contentH + 32)
     }
   }, [])
 
-  // Native wheel listener with passive:false so preventDefault() actually fires
+  // Native wheel listener — passive:false so preventDefault() fires
   React.useEffect(() => {
     const el = outerRef.current
     if (!el) return
     const handler = (e: WheelEvent) => {
       e.preventDefault()
       const factor = e.deltaY < 0 ? 1.1 : 0.9
-      setScale(s => Math.max(minScale.current, Math.min(3, s * factor)))
+      scaleRef.current = Math.max(minScaleRef.current, Math.min(3, scaleRef.current * factor))
+      applyTransform()
     }
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
@@ -1331,11 +1356,10 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
 
   function onMouseMove(e: React.MouseEvent) {
     if (!dragging.current) return
-    setPan(p => ({
-      x: p.x + (e.clientX - lastMouse.current.x),
-      y: p.y + (e.clientY - lastMouse.current.y),
-    }))
+    txRef.current += e.clientX - lastMouse.current.x
+    tyRef.current += e.clientY - lastMouse.current.y
     lastMouse.current = { x: e.clientX, y: e.clientY }
+    applyTransform()
   }
 
   function onMouseUp() { dragging.current = false; setIsDragging(false) }
@@ -1352,11 +1376,7 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
     >
       <div
         ref={innerRef}
-        style={{
-          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
-          transformOrigin: 'top left',
-          display: 'inline-block',
-        }}
+        style={{ transformOrigin: 'top left', display: 'inline-block' }}
       >
         {children}
       </div>
