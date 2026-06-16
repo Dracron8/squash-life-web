@@ -383,7 +383,7 @@ export default function TournamentPage() {
     ? tournament.tournament_details[0]
     : tournament.tournament_details as unknown as TournamentDetail
 
-  const capacity = detail ? calcCapacityFromDetail(detail) : 0
+  const capacity = detail ? (detail.max_players ?? calcCapacityFromDetail(detail)) : 0
   const divMatches = matches.filter(m => m.division === activeDivision)
   const mainMatches = divMatches.filter(m => m.draw_segment === 'main')
   const plateMatches = divMatches.filter(m => m.draw_segment === 'plate')
