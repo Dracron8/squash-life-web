@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
@@ -189,12 +189,15 @@ export default function TournamentPage() {
 
   const [showCreatedBanner, setShowCreatedBanner] = useState(false)
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
+  const [userId, setUserId] = useState<string | null>(null)
+  const [activeDraw, setActiveDraw] = useState<'main' | 'plate'>('main')
 
 
   const fetchAll = useCallback(async () => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) { router.push('/login'); return }
+    setUserId(user.id)
 
     const { data: t } = await supabase
       .from('tournaments')
@@ -604,7 +607,7 @@ export default function TournamentPage() {
             {divs.length > 0 && (
               <div className="flex flex-wrap gap-2 mb-6">
                 {divs.map(d => (
-                  <button key={d} onClick={() => setActiveDivision(d)}
+                  <button key={d} onClick={() => { setActiveDivision(d); setActiveDraw('main') }}
                     className={`text-xs font-bold tracking-widest px-4 py-2 rounded-xl border transition ${
                       activeDivision === d ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-700 text-neutral-400 hover:border-neutral-500'
                     }`}>
@@ -629,22 +632,53 @@ export default function TournamentPage() {
             {divs.length === 0 && (
               <p className="text-neutral-500 text-sm py-10 text-center">No divisions yet. Players need to register first.</p>
             )}
-            {mainMatches.length > 0 && (
-              <div className="mb-10">
-                <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">MAIN DRAW — {activeDivision}</p>
-                <div className="overflow-x-auto">
-                  <BracketView matches={mainMatches} maxRound={maxRound} playerName={playerName} startDate={detail?.start_date ?? null} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
+            {mainMatches.length > 0 && (() => {
+              const displayMatches = activeDraw === 'main' ? mainMatches : plateMatches
+              const displayMaxRound = activeDraw === 'main'
+                ? maxRound
+                : (plateMatches.length > 0 ? Math.max(...plateMatches.map(m => m.round_number)) : 0)
+              return (
+                <div>
+                  {/* Division title */}
+                  <h2 className="text-2xl font-bold underline text-center mb-6 text-neutral-100">
+                    DIVISION {activeDivision} — {activeDraw === 'main' ? 'MAIN DRAW' : 'PLATE DRAW'}
+                  </h2>
+                  {/* Plate / Main toggle */}
+                  <div className="mb-6">
+                    {activeDraw === 'main' && plateMatches.length > 0 && (
+                      <button
+                        onClick={() => setActiveDraw('plate')}
+                        className="text-xs font-bold tracking-widest px-5 py-2.5 rounded-xl border border-red-800 text-red-400 hover:bg-red-900/30 transition">
+                        PLATE DRAW →
+                      </button>
+                    )}
+                    {activeDraw === 'plate' && (
+                      <button
+                        onClick={() => setActiveDraw('main')}
+                        className="text-xs font-bold tracking-widest px-5 py-2.5 rounded-xl border border-red-800 text-red-400 hover:bg-red-900/30 transition">
+                        ← MAIN DRAW
+                      </button>
+                    )}
+                  </div>
+                  {/* Centrefold bracket */}
+                  {displayMatches.length > 0 && displayMaxRound > 0 && (
+                    <ZoomPanBracket>
+                      <CentrefoldBracket
+                        matches={displayMatches}
+                        maxRound={displayMaxRound}
+                        playerMap={playerMap}
+                        loggedInUserId={userId}
+                        onMatchTap={(m) => {
+                          setScoreModal(m)
+                          setScoreInput(m.score ?? '')
+                          setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null)
+                        }}
+                      />
+                    </ZoomPanBracket>
+                  )}
                 </div>
-              </div>
-            )}
-            {plateMatches.length > 0 && (
-              <div>
-                <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-4">PLATE DRAW — {activeDivision}</p>
-                <div className="overflow-x-auto">
-                  <BracketView matches={plateMatches} maxRound={Math.max(...plateMatches.map(m => m.round_number))} playerName={playerName} startDate={detail?.start_date ?? null} onMatchTap={(m) => { setScoreModal(m); setScoreInput(m.score ?? ''); setScoreWinner(m.winner_id === m.player1_id ? 'p1' : m.winner_id === m.player2_id ? 'p2' : null) }} />
-                </div>
-              </div>
-            )}
+              )
+            })()}
           </div>
         )}
 
@@ -923,80 +957,210 @@ function SettCheck({ value, onChange, label }: { value: boolean; onChange: (v: b
   )
 }
 
-// ─── Bracket View ─────────────────────────────────────────────────────────────
+// ─── Bracket Components ────────────────────────────────────────────────────────
 
-function fmtMatchSlot(m: Match, startDate: string | null): string {
-  if (!m.scheduled_time) return '—'
+function fmtCourtTime(m: Match): string {
+  if (!m.scheduled_time) return ''
   const dt = new Date(m.scheduled_time)
-  const dayNum = startDate
-    ? Math.floor((dt.getTime() - new Date(startDate + 'T00:00:00').getTime()) / 86400000) + 1
-    : 1
   const h = dt.getHours()
   const min = dt.getMinutes().toString().padStart(2, '0')
   const ampm = h >= 12 ? 'pm' : 'am'
   const h12 = h % 12 === 0 ? 12 : h % 12
   const court = m.court_id ?? '?'
-  return `Day ${dayNum} · Court ${court} · ${h12}:${min}${ampm}`
+  return `Court ${court} · ${h12}:${min}${ampm}`
 }
 
-function BracketView({ matches, maxRound, playerName, startDate, onMatchTap }: {
-  matches: Match[]
-  maxRound: number
-  playerName: (id: string | null) => string
-  startDate: string | null
+function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
+  m: Match
+  playerMap: Record<string, string>
+  loggedInUserId: string | null
   onMatchTap?: (match: Match) => void
 }) {
+  const p1w = m.winner_id === m.player1_id && m.winner_id !== null
+  const p2w = m.winner_id === m.player2_id && m.winner_id !== null
+  const canTap = onMatchTap && (m.player1_id || m.player2_id)
+  const slot = fmtCourtTime(m)
+
+  function renderName(uid: string | null, isWinner: boolean) {
+    const isMe = uid !== null && uid === loggedInUserId
+    if (uid === null) {
+      return <span className="text-[10px] text-neutral-600 lowercase">tbd</span>
+    }
+    const name = playerMap[uid] ?? uid.slice(0, 8) + '…'
+    return (
+      <span className={`text-xs truncate ${isWinner ? 'text-red-400' : 'text-neutral-300'} ${isMe ? 'font-bold' : 'font-normal'}`}>
+        {name}
+      </span>
+    )
+  }
+
+  return (
+    <div
+      onClick={canTap ? () => onMatchTap!(m) : undefined}
+      className={`w-44 bg-neutral-900 border rounded-xl overflow-hidden transition ${
+        m.winner_id ? 'border-red-900/50' : 'border-neutral-800'
+      } ${canTap ? 'cursor-pointer hover:border-red-600/60 hover:bg-neutral-800/60' : ''}`}
+    >
+      <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p1w ? 'bg-red-900/20' : ''}`}>
+        {renderName(m.player1_id, p1w)}
+        {p1w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
+        {p1w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
+      </div>
+      <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p2w ? 'bg-red-900/20' : ''}`}>
+        {renderName(m.player2_id, p2w)}
+        {p2w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
+        {p2w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
+      </div>
+      <div className="px-3 py-1.5">
+        <span className="text-[9px] text-neutral-600 font-mono">{slot}</span>
+      </div>
+    </div>
+  )
+}
+
+function roundLabel(rn: number, maxRound: number): string {
+  if (rn === maxRound) return 'FINAL'
+  if (rn === maxRound - 1) return 'SEMI-FINAL'
+  if (rn === maxRound - 2) return 'QUARTER-FINAL'
+  return `ROUND ${rn}`
+}
+
+function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMatchTap }: {
+  matches: Match[]
+  maxRound: number
+  playerMap: Record<string, string>
+  loggedInUserId: string | null
+  onMatchTap?: (match: Match) => void
+}) {
+  // Build sorted rounds
   const rounds: Match[][] = []
   for (let r = 1; r <= maxRound; r++) {
     rounds.push(matches.filter(m => m.round_number === r).sort((a, b) => a.match_index - b.match_index))
   }
-  const label = (r: number) => r === maxRound ? 'FINAL' : r === maxRound - 1 ? 'SEMI' : r === maxRound - 2 ? 'QF' : `R${r}`
+
+  const finalMatches = rounds[maxRound - 1] ?? []
+
+  // Split each round (except final) into top/bottom halves
+  const leftCols: { rn: number; matches: Match[] }[] = []   // R1→SEMI, top half (outermost first)
+  const rightCols: { rn: number; matches: Match[] }[] = []  // SEMI→R1, bottom half (innermost first)
+
+  for (let r = 1; r < maxRound; r++) {
+    const rMatches = rounds[r - 1]
+    const half = Math.ceil(rMatches.length / 2)
+    leftCols.push({ rn: r, matches: rMatches.slice(0, half) })
+  }
+  for (let r = maxRound - 1; r >= 1; r--) {
+    const rMatches = rounds[r - 1]
+    const half = Math.ceil(rMatches.length / 2)
+    rightCols.push({ rn: r, matches: rMatches.slice(half) })
+  }
+
+  // Column height: sized so R1 top (largest column) has nice spacing per card
+  const slotH = 112 // px per slot (card ~88px + ~24px gap)
+  const r1TopCount = leftCols.length > 0 ? leftCols[0].matches.length : 1
+  const colH = r1TopCount * slotH
+
+  const labelCls = 'text-[9px] font-bold tracking-widest text-neutral-600 text-center mb-2 px-1 whitespace-nowrap'
+
+  function renderCol(rn: number, colMatches: Match[]) {
+    return (
+      <div key={rn} className="flex flex-col">
+        <div className={labelCls}>{roundLabel(rn, maxRound)}</div>
+        <div className="flex flex-col justify-around" style={{ height: colH }}>
+          {colMatches.map(m => (
+            <MatchCard key={m.id} m={m} playerMap={playerMap} loggedInUserId={loggedInUserId} onMatchTap={onMatchTap} />
+          ))}
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex gap-4 min-w-max pb-4">
-      {rounds.map((roundMatches, ri) => {
-        const rn = ri + 1
-        return (
-          <div key={rn} className="flex flex-col">
-            <div className="text-[10px] font-bold tracking-widest text-neutral-600 text-center mb-2 px-2">{label(rn)}</div>
-            <div className="flex flex-col justify-around" style={{ gap: `${Math.pow(2, ri) * 4}px` }}>
-              {roundMatches.map(m => {
-                const p1w = m.winner_id === m.player1_id
-                const p2w = m.winner_id === m.player2_id
-                const canTap = onMatchTap && (m.player1_id || m.player2_id)
-                const slot = fmtMatchSlot(m, startDate)
-                return (
-                  <div
-                    key={m.id}
-                    onClick={canTap ? () => onMatchTap(m) : undefined}
-                    className={`w-48 bg-neutral-900 border rounded-xl overflow-hidden transition ${
-                      m.winner_id ? 'border-red-900/50' : 'border-neutral-800'
-                    } ${canTap ? 'cursor-pointer hover:border-red-600/60 hover:bg-neutral-800/60' : ''}`}
-                  >
-                    <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p1w ? 'bg-red-900/20' : ''}`}>
-                      <span className={`text-xs truncate ${p1w ? 'font-bold text-red-400' : 'text-neutral-400'}`}>
-                        {playerName(m.player1_id)}
-                      </span>
-                      {p1w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
-                      {p1w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
-                    </div>
-                    <div className={`flex items-center justify-between px-3 py-2 border-b border-neutral-800 ${p2w ? 'bg-red-900/20' : ''}`}>
-                      <span className={`text-xs truncate ${p2w ? 'font-bold text-red-400' : 'text-neutral-400'}`}>
-                        {playerName(m.player2_id)}
-                      </span>
-                      {p2w && m.score && <span className="text-[9px] text-neutral-500 ml-1 shrink-0">{m.score}</span>}
-                      {p2w && !m.score && <span className="text-[8px] text-red-500 ml-1">✓</span>}
-                    </div>
-                    <div className="px-3 py-1.5">
-                      <span className="text-[9px] text-neutral-600 font-mono">{slot}</span>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )
-      })}
+    <div className="flex gap-3 items-start pb-4" style={{ minWidth: 'max-content' }}>
+      {/* Left arm: outermost → inward */}
+      {leftCols.map(({ rn, matches: cm }) => renderCol(rn, cm))}
+
+      {/* Centre: FINAL */}
+      <div className="flex flex-col">
+        <div className={labelCls}>FINAL</div>
+        <div className="flex flex-col justify-around" style={{ height: colH }}>
+          {finalMatches.map(m => (
+            <MatchCard key={m.id} m={m} playerMap={playerMap} loggedInUserId={loggedInUserId} onMatchTap={onMatchTap} />
+          ))}
+        </div>
+      </div>
+
+      {/* Right arm: inward → outermost */}
+      {rightCols.map(({ rn, matches: cm }) => renderCol(rn, cm))}
+    </div>
+  )
+}
+
+function ZoomPanBracket({ children }: { children: React.ReactNode }) {
+  const outerRef = React.useRef<HTMLDivElement>(null)
+  const innerRef = React.useRef<HTMLDivElement>(null)
+  const [scale, setScale] = React.useState(1)
+  const [pan, setPan] = React.useState({ x: 0, y: 0 })
+  const dragging = React.useRef(false)
+  const lastMouse = React.useRef({ x: 0, y: 0 })
+  const naturalH = React.useRef(0)
+
+  React.useLayoutEffect(() => {
+    if (!outerRef.current || !innerRef.current) return
+    const availW = outerRef.current.clientWidth
+    const contentW = innerRef.current.scrollWidth
+    const contentH = innerRef.current.scrollHeight
+    naturalH.current = contentH
+    if (contentW > availW && contentW > 0) {
+      setScale(availW / contentW)
+    }
+  }, [])
+
+  const containerH = naturalH.current > 0 ? Math.ceil(naturalH.current * scale) + 32 : 'auto'
+
+  function onWheel(e: React.WheelEvent) {
+    e.preventDefault()
+    const factor = e.deltaY < 0 ? 1.1 : 0.9
+    setScale(s => Math.max(0.15, Math.min(3, s * factor)))
+  }
+
+  function onMouseDown(e: React.MouseEvent) {
+    dragging.current = true
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+  }
+
+  function onMouseMove(e: React.MouseEvent) {
+    if (!dragging.current) return
+    setPan(p => ({
+      x: p.x + (e.clientX - lastMouse.current.x),
+      y: p.y + (e.clientY - lastMouse.current.y),
+    }))
+    lastMouse.current = { x: e.clientX, y: e.clientY }
+  }
+
+  function onMouseUp() { dragging.current = false }
+
+  return (
+    <div
+      ref={outerRef}
+      className="relative overflow-hidden w-full select-none"
+      style={{ height: containerH, minHeight: 200, cursor: 'grab' }}
+      onWheel={onWheel}
+      onMouseDown={onMouseDown}
+      onMouseMove={onMouseMove}
+      onMouseUp={onMouseUp}
+      onMouseLeave={onMouseUp}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${scale})`,
+          transformOrigin: 'top left',
+          display: 'inline-block',
+        }}
+      >
+        {children}
+      </div>
     </div>
   )
 }
