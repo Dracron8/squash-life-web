@@ -1,11 +1,25 @@
 'use client'
 
 import { createClient } from '@/lib/supabase/client'
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import SignupModal from '@/app/components/SignupModal'
 
+function LoginContent() {
+  const searchParams = useSearchParams()
+  const nextPath = searchParams.get('next') || '/dashboard'
+  return <LoginForm nextPath={nextPath} />
+}
+
 export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
+  )
+}
+
+function LoginForm({ nextPath }: { nextPath: string }) {
   const [googleLoading, setGoogleLoading] = useState(false)
   const [emailLoading, setEmailLoading] = useState(false)
   const [email, setEmail] = useState('')
@@ -41,7 +55,7 @@ const handleGoogleLogin = async () => {
       if (error) {
         setError(error.message)
       } else {
-        router.push('/dashboard')
+        router.push(nextPath)
       }
     } finally {
       setEmailLoading(false)

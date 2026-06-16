@@ -679,7 +679,7 @@ export default function TournamentPage() {
                     {activeDraw === 'main' && plateMatches.length > 0 && (
                       <button
                         onClick={() => setActiveDraw('plate')}
-                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-red-200 text-[var(--sl-accent)] hover:bg-red-50 transition shrink-0">
+                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-[var(--sl-accent-30)] text-[var(--sl-accent)] hover:bg-[var(--sl-accent-10)] transition shrink-0">
                         PLATE DRAW →
                       </button>
                     )}
@@ -1015,10 +1015,13 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
   const p2w = m.winner_id === m.player2_id && m.winner_id !== null
   const canTap = onMatchTap && (m.player1_id || m.player2_id)
   const { court, time } = parseSidebarInfo(m)
+  // R1 bye: one real player, one null slot → show "BYE" not "tbd"
+  const isByeMatch = m.round_number === 1 && ((m.player1_id === null) !== (m.player2_id === null))
 
-  function renderRow(uid: string | null, isWinner: boolean) {
+  function renderRow(uid: string | null, isWinner: boolean, isByeSlot: boolean = false) {
     const isMe = uid !== null && uid === loggedInUserId
     const nameStr = uid === null ? null : (playerMap[uid] ?? uid.slice(0, 8) + '…')
+    const emptyLabel = isByeSlot ? 'BYE' : 'tbd'
     return (
       <div style={{
         display: 'flex',
@@ -1040,7 +1043,7 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
           fontStyle: nameStr ? 'normal' : 'italic',
           fontFamily: "'Assistant', sans-serif",
         }}>
-          {nameStr ?? 'tbd'}
+          {nameStr ?? emptyLabel}
         </span>
         {isWinner && m.score && (
           <span style={{ fontSize: 10, color: '#ffffff', marginLeft: 6, whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.85 }}>
@@ -1069,45 +1072,44 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
       {/* Left sidebar: court + time */}
       {(court || time) && (
         <div style={{
-          width: 36,
+          width: 48,
           background: 'var(--sl-surface)',
           borderRight: '1px solid var(--sl-border)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '6px 3px',
-          gap: 3,
+          padding: '6px 4px',
+          gap: 2,
           flexShrink: 0,
         }}>
           {court && (
             <span style={{
-              fontSize: 7,
+              fontSize: 9,
               fontWeight: 700,
               textTransform: 'uppercase',
-              letterSpacing: '0.03em',
-              color: 'var(--sl-text-50)',
-              writingMode: 'vertical-rl',
-              transform: 'rotate(180deg)',
+              letterSpacing: '0.05em',
+              color: 'var(--sl-text-30)',
               lineHeight: 1.2,
+              textAlign: 'center',
             }}>{court}</span>
           )}
           {time && (
             <span style={{
-              fontSize: 7,
+              fontSize: 11,
+              fontWeight: 600,
               color: 'var(--sl-text-50)',
-              writingMode: 'vertical-rl',
-              transform: 'rotate(180deg)',
               lineHeight: 1.2,
+              textAlign: 'center',
             }}>{time}</span>
           )}
         </div>
       )}
       {/* Player rows */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        {renderRow(m.player1_id, p1w)}
+        {renderRow(m.player1_id, p1w, isByeMatch && m.player1_id === null)}
         <div style={{ height: 1, background: 'var(--sl-border)', flexShrink: 0 }} />
-        {renderRow(m.player2_id, p2w)}
+        {renderRow(m.player2_id, p2w, isByeMatch && m.player2_id === null)}
       </div>
     </div>
   )
@@ -1280,8 +1282,8 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
   const dragging = React.useRef(false)
   const lastMouse = React.useRef({ x: 0, y: 0 })
   const minScale = React.useRef(1)
-  // Fixed container height set once on mount — must NOT scale with zoom to prevent page scroll
   const [containerH, setContainerH] = React.useState<number | 'auto'>('auto')
+  const [isDragging, setIsDragging] = React.useState(false)
 
   React.useLayoutEffect(() => {
     if (!outerRef.current || !innerRef.current) return
@@ -1292,21 +1294,28 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
       const initialScale = availW / contentW
       minScale.current = initialScale
       setScale(initialScale)
-      // Fix container height at initial fit — zoom changes scale but not outer height
       setContainerH(Math.ceil(contentH * initialScale) + 32)
     } else {
       setContainerH(contentH + 32)
     }
   }, [])
 
-  function onWheel(e: React.WheelEvent) {
-    e.preventDefault()
-    const factor = e.deltaY < 0 ? 1.1 : 0.9
-    setScale(s => Math.max(minScale.current, Math.min(3, s * factor)))
-  }
+  // Native wheel listener with passive:false so preventDefault() actually fires
+  React.useEffect(() => {
+    const el = outerRef.current
+    if (!el) return
+    const handler = (e: WheelEvent) => {
+      e.preventDefault()
+      const factor = e.deltaY < 0 ? 1.1 : 0.9
+      setScale(s => Math.max(minScale.current, Math.min(3, s * factor)))
+    }
+    el.addEventListener('wheel', handler, { passive: false })
+    return () => el.removeEventListener('wheel', handler)
+  }, [])
 
   function onMouseDown(e: React.MouseEvent) {
     dragging.current = true
+    setIsDragging(true)
     lastMouse.current = { x: e.clientX, y: e.clientY }
   }
 
@@ -1319,14 +1328,13 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
     lastMouse.current = { x: e.clientX, y: e.clientY }
   }
 
-  function onMouseUp() { dragging.current = false }
+  function onMouseUp() { dragging.current = false; setIsDragging(false) }
 
   return (
     <div
       ref={outerRef}
       className="relative overflow-hidden w-full select-none"
-      style={{ height: containerH, minHeight: 200, cursor: 'grab' }}
-      onWheel={onWheel}
+      style={{ height: containerH, minHeight: 200, cursor: isDragging ? 'grabbing' : 'grab' }}
       onMouseDown={onMouseDown}
       onMouseMove={onMouseMove}
       onMouseUp={onMouseUp}
