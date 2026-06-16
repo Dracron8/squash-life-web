@@ -673,7 +673,7 @@ export default function TournamentPage() {
                 <div>
                   {/* Division title */}
                   <div className="flex items-center justify-between mb-6 gap-4">
-                    <h2 className="text-lg font-black tracking-widest text-gray-900 uppercase">
+                    <h2 className="text-lg font-black tracking-widest uppercase" style={{ color: 'var(--sl-text)' }}>
                       Division {activeDivision} &mdash; {activeDraw === 'main' ? 'Main Draw' : 'Plate Draw'}
                     </h2>
                     {activeDraw === 'main' && plateMatches.length > 0 && (
@@ -686,7 +686,7 @@ export default function TournamentPage() {
                     {activeDraw === 'plate' && (
                       <button
                         onClick={() => setActiveDraw('main')}
-                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition shrink-0">
+                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl transition shrink-0" style={{ border: '1px solid var(--sl-border)', color: 'var(--sl-text-60)' }}>
                         ← MAIN DRAW
                       </button>
                     )}
@@ -1214,12 +1214,12 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
   const r1TopCount = leftCols.length > 0 ? leftCols[0].matches.length : 1
   const colH = r1TopCount * slotH
 
-  const labelCls = 'text-[9px] font-bold tracking-widest text-gray-400 text-center mb-0.5 px-1 whitespace-nowrap uppercase'
+  const labelCls = 'text-[9px] font-bold tracking-widest text-center mb-0.5 px-1 whitespace-nowrap uppercase'
 
   function renderCol(rn: number, colMatches: Match[]) {
     return (
       <div className="flex flex-col flex-shrink-0">
-        <div className={labelCls} style={{ height: 22 }}>{roundLabel(rn, maxRound)}</div>
+        <div className={labelCls} style={{ height: 22, color: 'var(--sl-text-30)' }}>{roundLabel(rn, maxRound)}</div>
         <div className="flex flex-col justify-around" style={{ height: colH }}>
           {colMatches.map(m => (
             <MatchCard key={m.id} m={m} playerMap={playerMap} loggedInUserId={loggedInUserId} onMatchTap={onMatchTap} />
