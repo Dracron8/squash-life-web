@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/client'
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import SignupModal from '@/app/components/SignupModal'
 
 export default function LoginPage() {
@@ -18,6 +18,8 @@ const [showSignup, setShowSignup] = useState(false)
   const [forgotSent, setForgotSent] = useState(false)
   const supabase = createClient()
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const nextPath = searchParams.get('next') || '/dashboard'
 
 const handleGoogleLogin = async () => {
     setGoogleLoading(true)
@@ -41,7 +43,7 @@ const handleGoogleLogin = async () => {
       if (error) {
         setError(error.message)
       } else {
-        router.push('/dashboard')
+        router.push(nextPath)
       }
     } finally {
       setEmailLoading(false)

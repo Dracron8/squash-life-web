@@ -679,7 +679,7 @@ export default function TournamentPage() {
                     {activeDraw === 'main' && plateMatches.length > 0 && (
                       <button
                         onClick={() => setActiveDraw('plate')}
-                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-red-200 text-[var(--sl-accent)] hover:bg-red-50 transition shrink-0">
+                        className="text-xs font-bold tracking-widest px-4 py-2 rounded-xl border border-[var(--sl-accent-30)] text-[var(--sl-accent)] hover:bg-[var(--sl-accent-10)] transition shrink-0">
                         PLATE DRAW →
                       </button>
                     )}
@@ -1069,36 +1069,35 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
       {/* Left sidebar: court + time */}
       {(court || time) && (
         <div style={{
-          width: 36,
+          width: 48,
           background: 'var(--sl-surface)',
           borderRight: '1px solid var(--sl-border)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: '6px 3px',
-          gap: 3,
+          padding: '6px 4px',
+          gap: 2,
           flexShrink: 0,
         }}>
           {court && (
             <span style={{
-              fontSize: 7,
+              fontSize: 9,
               fontWeight: 700,
               textTransform: 'uppercase',
-              letterSpacing: '0.03em',
-              color: 'var(--sl-text-50)',
-              writingMode: 'vertical-rl',
-              transform: 'rotate(180deg)',
+              letterSpacing: '0.05em',
+              color: 'var(--sl-text-30)',
               lineHeight: 1.2,
+              textAlign: 'center',
             }}>{court}</span>
           )}
           {time && (
             <span style={{
-              fontSize: 7,
+              fontSize: 11,
+              fontWeight: 600,
               color: 'var(--sl-text-50)',
-              writingMode: 'vertical-rl',
-              transform: 'rotate(180deg)',
               lineHeight: 1.2,
+              textAlign: 'center',
             }}>{time}</span>
           )}
         </div>
