@@ -5,7 +5,7 @@ import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { reconstructDaySchedules } from '@/lib/td/flutterParity'
-import { generateBracketAndSchedule } from '@/lib/td/drawGenerator'
+import { generateBracketAndSchedule, type DrawConstraint } from '@/lib/td/drawGenerator'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -190,6 +190,21 @@ export default function TournamentPage() {
   const [showCreatedBanner, setShowCreatedBanner] = useState(false)
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
 
+  // Constraint wizard
+  const [showWizard, setShowWizard] = useState(false)
+  const [wizardForceReset, setWizardForceReset] = useState(false)
+  const [wizardAnswer, setWizardAnswer] = useState<'pending' | 'yes'>('pending')
+  const [constraints, setConstraints] = useState<DrawConstraint[]>([])
+  const [pendingConstraint, setPendingConstraint] = useState<{
+    userId: string
+    playerName: string
+    division: string
+    type: 'bye' | 'custom_time' | null
+    day: number
+    notBefore: string
+  } | null>(null)
+  const [constraintSearch, setConstraintSearch] = useState('')
+
   const fetchAll = useCallback(async () => {
     const supabase = createClient()
     const { data: { user } } = await supabase.auth.getUser()
@@ -283,8 +298,9 @@ export default function TournamentPage() {
     setTournament(prev => prev ? { ...prev, status } : prev)
   }
 
-  async function generateDraw(forceReset: boolean) {
+  async function generateDraw(forceReset: boolean, drawConstraints: DrawConstraint[] = []) {
     if (!tournament) return
+    setShowWizard(false)
     setGeneratingDraw(true)
     setError(null)
     const supabase = createClient()
@@ -293,10 +309,20 @@ export default function TournamentPage() {
       tournament.id,
       tournament.draw_type,
       forceReset,
+      drawConstraints,
     )
     if (genErr) { setError(genErr); setGeneratingDraw(false); return }
     await fetchAll()
     setGeneratingDraw(false)
+  }
+
+  function openWizard(forceReset: boolean) {
+    setConstraints([])
+    setWizardAnswer('pending')
+    setPendingConstraint(null)
+    setConstraintSearch('')
+    setWizardForceReset(forceReset)
+    setShowWizard(true)
   }
 
   async function saveScore() {
@@ -612,12 +638,12 @@ export default function TournamentPage() {
               </div>
             )}
             <div className="flex gap-3 mb-8">
-              <button onClick={() => generateDraw(false)} disabled={generatingDraw || matches.length > 0}
+              <button onClick={() => openWizard(false)} disabled={generatingDraw || matches.length > 0}
                 className="bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl transition">
                 {generatingDraw ? 'GENERATING...' : 'GENERATE DRAW'}
               </button>
               {matches.length > 0 && (
-                <button onClick={() => { if (confirm('Regenerate? Existing scores will be lost.')) generateDraw(true) }}
+                <button onClick={() => openWizard(true)}
                   disabled={generatingDraw}
                   className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 disabled:opacity-40 transition">
                   REGENERATE (RESET)
@@ -703,6 +729,213 @@ export default function TournamentPage() {
           <SettingsTab tournament={tournament} detail={detail ?? null} onUpdate={fetchAll} onDelete={deleteTournament} />
         )}
       </div>
+
+      {/* Constraint wizard modal */}
+      {showWizard && (() => {
+        const maxConstraints = Math.max(2, Math.floor(registrations.length / 10))
+        const atMax = constraints.length >= maxConstraints
+
+        // nextPowerOf2 helper
+        function nextPow2(n: number): number {
+          let p = 1; while (p < n) p *= 2; return p
+        }
+
+        // Divisions with BYE slots available
+        const divByeCount: Record<string, number> = {}
+        for (const div of divs) {
+          const n = divCounts[div] ?? 0
+          divByeCount[div] = nextPow2(n) - n
+        }
+
+        // Player search results (exclude already-constrained players)
+        const constrainedIds = new Set(constraints.map(c => c.userId))
+        const searchLower = constraintSearch.toLowerCase()
+        const searchResults = searchLower.length >= 1
+          ? registrations.filter(r =>
+              !constrainedIds.has(r.user_id) &&
+              `${r.first_name} ${r.last_name}`.toLowerCase().includes(searchLower)
+            ).slice(0, 8)
+          : []
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4"
+            onClick={() => setShowWizard(false)}>
+            <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+              onClick={e => e.stopPropagation()}>
+
+              <h3 className="text-sm font-bold tracking-widest mb-1">SPECIAL SCHEDULING NEEDS?</h3>
+              <p className="text-neutral-500 text-xs mb-5">Do any players need a custom slot?</p>
+
+              {wizardAnswer === 'pending' && (
+                <div className="flex gap-3 mb-6">
+                  <button onClick={() => setWizardAnswer('yes')}
+                    className="flex-1 py-2.5 rounded-xl border border-neutral-600 text-sm font-semibold text-neutral-200 hover:border-red-600 hover:text-red-400 transition">
+                    YES
+                  </button>
+                  <button onClick={() => generateDraw(wizardForceReset, [])}
+                    className="flex-1 py-2.5 rounded-xl border border-neutral-700 text-sm font-semibold text-neutral-500 hover:border-neutral-500 transition">
+                    NO
+                  </button>
+                  <button onClick={() => generateDraw(wizardForceReset, [])}
+                    className="flex-1 py-2.5 rounded-xl border border-neutral-700 text-sm font-semibold text-neutral-500 hover:border-neutral-500 transition">
+                    SKIP
+                  </button>
+                </div>
+              )}
+
+              {wizardAnswer === 'yes' && (
+                <>
+                  {/* Constraint list */}
+                  {constraints.length > 0 && (
+                    <div className="mb-4 space-y-2">
+                      {constraints.map(c => (
+                        <div key={c.userId} className="flex items-center justify-between bg-neutral-800 rounded-xl px-4 py-2.5 text-sm">
+                          <span className="text-neutral-200 font-medium">
+                            {registrations.find(r => r.user_id === c.userId)
+                              ? `${registrations.find(r => r.user_id === c.userId)!.first_name} ${registrations.find(r => r.user_id === c.userId)!.last_name}`
+                              : c.userId.slice(0, 8)}
+                          </span>
+                          <div className="flex items-center gap-3">
+                            <span className="text-[10px] font-bold tracking-widest text-red-400">
+                              {c.type === 'bye' ? 'BYE' : `DAY ${c.day} · NOT BEFORE ${c.notBefore}`}
+                            </span>
+                            <button onClick={() => setConstraints(prev => prev.filter(x => x.userId !== c.userId))}
+                              className="text-neutral-600 hover:text-red-400 transition text-base leading-none">×</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Pending constraint builder */}
+                  {pendingConstraint ? (
+                    <div className="mb-4 bg-neutral-800 rounded-xl p-4 space-y-3">
+                      <p className="text-xs font-bold tracking-widest text-neutral-400">
+                        {pendingConstraint.playerName}
+                        <span className="ml-2 text-neutral-600">{pendingConstraint.division}</span>
+                      </p>
+
+                      {pendingConstraint.type === null && (
+                        <div className="flex gap-3">
+                          {(divByeCount[pendingConstraint.division] ?? 0) > 0 && (
+                            <button onClick={() => {
+                              setConstraints(prev => [...prev, { userId: pendingConstraint.userId, type: 'bye' }])
+                              setPendingConstraint(null)
+                              setConstraintSearch('')
+                            }} className="flex-1 py-2 rounded-xl border border-neutral-600 text-xs font-bold tracking-widest text-neutral-300 hover:border-red-600 hover:text-red-400 transition">
+                              FIRST ROUND BYE
+                            </button>
+                          )}
+                          <button onClick={() => setPendingConstraint(prev => prev ? { ...prev, type: 'custom_time' } : null)}
+                            className="flex-1 py-2 rounded-xl border border-neutral-600 text-xs font-bold tracking-widest text-neutral-300 hover:border-red-600 hover:text-red-400 transition">
+                            CUSTOM TIME
+                          </button>
+                        </div>
+                      )}
+
+                      {pendingConstraint.type === 'custom_time' && (
+                        <>
+                          <div>
+                            <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Day</p>
+                            <div className="flex gap-2">
+                              {[1, 2, 3].map(d => (
+                                <button key={d} onClick={() => setPendingConstraint(prev => prev ? { ...prev, day: d } : null)}
+                                  className={`flex-1 py-2 rounded-xl border text-xs font-bold tracking-widest transition ${
+                                    pendingConstraint.day === d ? 'bg-red-700 border-red-700 text-white' : 'border-neutral-600 text-neutral-400 hover:border-neutral-400'
+                                  }`}>
+                                  DAY {d}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold tracking-widest text-neutral-500 uppercase mb-2">Not before</p>
+                            <input type="time"
+                              className="w-full bg-neutral-900 border border-neutral-600 rounded-xl px-4 py-2.5 text-sm text-neutral-100 focus:outline-none focus:border-red-600 transition"
+                              value={pendingConstraint.notBefore}
+                              onChange={e => setPendingConstraint(prev => prev ? { ...prev, notBefore: e.target.value } : null)}
+                            />
+                          </div>
+                          <div className="flex gap-3 pt-1">
+                            <button onClick={() => { setPendingConstraint(null); setConstraintSearch('') }}
+                              className="flex-1 py-2 rounded-xl border border-neutral-700 text-xs font-bold tracking-widest text-neutral-500 hover:border-neutral-500 transition">
+                              CANCEL
+                            </button>
+                            <button
+                              disabled={!pendingConstraint.notBefore}
+                              onClick={() => {
+                                setConstraints(prev => [...prev, {
+                                  userId: pendingConstraint.userId,
+                                  type: 'custom_time',
+                                  day: pendingConstraint.day,
+                                  notBefore: pendingConstraint.notBefore,
+                                }])
+                                setPendingConstraint(null)
+                                setConstraintSearch('')
+                              }}
+                              className="flex-1 py-2 rounded-xl bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest transition">
+                              ADD
+                            </button>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  ) : (
+                    !atMax ? (
+                      <div className="mb-4 relative">
+                        <input
+                          className="w-full bg-neutral-800 border border-neutral-700 rounded-xl px-4 py-3 text-sm text-neutral-100 placeholder-neutral-500 focus:outline-none focus:border-red-600 transition"
+                          placeholder="Search player by name…"
+                          value={constraintSearch}
+                          onChange={e => setConstraintSearch(e.target.value)}
+                        />
+                        {searchResults.length > 0 && (
+                          <div className="absolute left-0 right-0 top-full mt-1 bg-neutral-800 border border-neutral-700 rounded-xl overflow-hidden z-10">
+                            {searchResults.map(r => (
+                              <button key={r.user_id}
+                                onClick={() => {
+                                  setPendingConstraint({
+                                    userId: r.user_id,
+                                    playerName: `${r.first_name} ${r.last_name}`,
+                                    division: r.division ?? '',
+                                    type: null,
+                                    day: 1,
+                                    notBefore: '09:00',
+                                  })
+                                  setConstraintSearch('')
+                                }}
+                                className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-neutral-700 transition text-left">
+                                <span className="text-sm text-neutral-200">{r.first_name} {r.last_name}</span>
+                                <span className="text-[10px] font-bold tracking-widest text-red-500">{r.division}</span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="mb-4 text-xs text-neutral-500 text-center py-2">Maximum custom slots reached ({maxConstraints})</p>
+                    )
+                  )}
+                </>
+              )}
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowWizard(false)}
+                  className="flex-1 text-xs font-bold tracking-widest text-neutral-400 border border-neutral-700 py-3 rounded-xl hover:border-neutral-500 transition">
+                  CANCEL
+                </button>
+                {wizardAnswer === 'yes' && (
+                  <button onClick={() => generateDraw(wizardForceReset, constraints)}
+                    disabled={generatingDraw}
+                    className="flex-1 text-xs font-bold tracking-widest bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white py-3 rounded-xl transition">
+                    {generatingDraw ? 'GENERATING...' : wizardForceReset ? 'CONFIRM + REGENERATE' : 'CONFIRM + GENERATE'}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Score modal */}
       {scoreModal && (

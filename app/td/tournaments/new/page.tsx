@@ -241,6 +241,30 @@ export default function NewTournamentPage() {
     localStorage.setItem(LS_STEP_KEY, String(step))
   }, [step])
 
+  // Pre-fill club fields from saved profile (new tournament only)
+  useEffect(() => {
+    if (editId) return
+    ;(async () => {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('club_name, club_city, club_province, club_country')
+        .eq('user_id', user.id)
+        .maybeSingle()
+      if (!profile) return
+      setForm(prev => ({
+        ...prev,
+        venue_name: prev.venue_name || profile.club_name || '',
+        venue_city: prev.venue_city || profile.club_city || '',
+        venue_province: prev.venue_province || profile.club_province || '',
+        venue_country: prev.venue_country || profile.club_country || 'Canada',
+      }))
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editId])
+
   // Load existing tournament for edit mode (from list or detail "EDIT SETUP")
   useEffect(() => {
     const eid = editId
@@ -462,6 +486,15 @@ export default function NewTournamentPage() {
           .eq('tournament_id', editingId)
         if (dErr) throw dErr
 
+        // Upsert club profile for future pre-fill
+        await supabase.from('profiles').upsert({
+          user_id: user.id,
+          club_name: form.venue_name.trim(),
+          club_city: form.venue_city.trim(),
+          club_province: form.venue_province.trim(),
+          club_country: form.venue_country.trim(),
+        }, { onConflict: 'user_id' })
+
         // Clear wizard state
         localStorage.removeItem(LS_KEY)
         localStorage.removeItem(LS_STEP_KEY)
@@ -491,6 +524,15 @@ export default function NewTournamentPage() {
             buildTournamentDetailsPayload(newTournament.id, form._club_id ?? null, form),
           )
         if (dErr) throw dErr
+
+        // Upsert club profile for future pre-fill
+        await supabase.from('profiles').upsert({
+          user_id: user.id,
+          club_name: form.venue_name.trim(),
+          club_city: form.venue_city.trim(),
+          club_province: form.venue_province.trim(),
+          club_country: form.venue_country.trim(),
+        }, { onConflict: 'user_id' })
 
         // Clear wizard state
         localStorage.removeItem(LS_KEY)

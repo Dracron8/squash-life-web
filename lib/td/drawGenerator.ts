@@ -13,6 +13,17 @@ import { SupabaseClient } from '@supabase/supabase-js'
 
 const DIV_ORDER = ['OPEN', 'A', 'B', 'C', 'D']
 
+// ─── Constraint Types ─────────────────────────────────────────────────────────
+
+export type DrawConstraint = {
+  userId: string
+  type: 'bye' | 'custom_time'
+  /** 1-based tournament day (1 = start_date, 2 = start_date + 1 day, …) */
+  day?: number
+  /** 'HH:MM' — scheduler won't assign this player's match before this time on the given day */
+  notBefore?: string
+}
+
 // ─── Public Entry Point ───────────────────────────────────────────────────────
 
 /**
@@ -24,6 +35,7 @@ export async function generateBracketAndSchedule(
   tournamentId: string,
   format: string,
   forceReset: boolean,
+  constraints: DrawConstraint[] = [],
 ): Promise<{ error?: string }> {
   try {
     // 1. Optional reset
@@ -64,6 +76,20 @@ export async function generateBracketAndSchedule(
       return {}
     }
 
+    // 3b. Apply BYE constraints: move constrained player to front of their division
+    //     (position 0 = top seed = gets the first BYE slot)
+    for (const c of constraints) {
+      if (c.type !== 'bye') continue
+      for (const div of validDivs) {
+        const arr = byDiv[div]
+        const idx = arr.indexOf(c.userId)
+        if (idx > 0) {
+          arr.splice(idx, 1)
+          arr.unshift(c.userId)
+        }
+      }
+    }
+
     // 4. Build bracket per division
     for (const div of validDivs) {
       const players = byDiv[div]
@@ -92,7 +118,7 @@ export async function generateBracketAndSchedule(
     await supabase.from('tournaments').update({ status: 'active' }).eq('id', tournamentId)
 
     // 6. Schedule every match (FullBracketScheduler)
-    const schedErr = await scheduleAllMatches(supabase, tournamentId)
+    const schedErr = await scheduleAllMatches(supabase, tournamentId, constraints)
     if (schedErr) return { error: schedErr }
 
     return {}
@@ -330,6 +356,7 @@ async function advanceByes(
 async function scheduleAllMatches(
   supabase: SupabaseClient,
   tournamentId: string,
+  constraints: DrawConstraint[] = [],
 ): Promise<string | null> {
   // Fetch tournament details
   const { data: detail, error: detailErr } = await supabase
@@ -352,10 +379,19 @@ async function scheduleAllMatches(
   // Parse start date as a plain calendar date (avoid timezone shift)
   const [sy, smo, sd] = startDateStr.slice(0, 10).split('-').map(Number)
 
-  // Fetch all match IDs ordered by round ASC, draw_segment DESC (main > plate)
+  // Build notBefore constraint map: userId → { dayOffset (0-based), hh, mm }
+  const notBeforeMap = new Map<string, { dayOffset: number; hh: number; mm: number }>()
+  for (const c of constraints) {
+    if (c.type === 'custom_time' && c.notBefore && c.day) {
+      const [hh, mm] = c.notBefore.split(':').map(Number)
+      notBeforeMap.set(c.userId, { dayOffset: c.day - 1, hh, mm })
+    }
+  }
+
+  // Fetch match IDs + player IDs ordered by round ASC, draw_segment DESC (main > plate)
   const { data: matchList, error: matchErr } = await supabase
     .from('matches')
-    .select('id')
+    .select('id, player1_id, player2_id')
     .eq('tournament_id', tournamentId)
     .order('round_number', { ascending: true })
     .order('draw_segment', { ascending: false })
@@ -386,6 +422,15 @@ async function scheduleAllMatches(
       startTime = new Date(
         startTime.getFullYear(), startTime.getMonth(), startTime.getDate() + 1, sh, sm, 0, 0,
       )
+    }
+
+    // Apply notBefore constraints for players in this match
+    for (const playerId of [match.player1_id, match.player2_id]) {
+      if (!playerId) continue
+      const c = notBeforeMap.get(playerId as string)
+      if (!c) continue
+      const constraintTime = new Date(sy, smo - 1, sd + c.dayOffset, c.hh, c.mm, 0, 0)
+      if (startTime < constraintTime) startTime = new Date(constraintTime)
     }
 
     // Write scheduled_time + court_id
