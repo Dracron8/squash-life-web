@@ -662,7 +662,7 @@ export default function TournamentPage() {
                   </div>
                   {/* Centrefold bracket */}
                   {displayMatches.length > 0 && displayMaxRound > 0 && (
-                    <ZoomPanBracket>
+                    <ZoomPanBracket key={activeDivision + activeDraw}>
                       <CentrefoldBracket
                         matches={displayMatches}
                         maxRound={displayMaxRound}
