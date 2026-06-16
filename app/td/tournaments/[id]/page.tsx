@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter, useParams, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { reconstructDaySchedules, generateBasicSchedule, type ScheduleSlot } from '@/lib/td/flutterParity'
+import { reconstructDaySchedules } from '@/lib/td/flutterParity'
 import { generateBracketAndSchedule } from '@/lib/td/drawGenerator'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -98,6 +98,8 @@ type Match = {
   score: string | null
   match_index: number
   next_match_id: string | null
+  scheduled_time: string | null
+  court_id: string | null
 }
 
 const TABS = ['OVERVIEW', 'SCHEDULE', 'REGISTRATIONS', 'DRAW', 'SCORE ENTRY', 'SETTINGS'] as const
@@ -185,9 +187,6 @@ export default function TournamentPage() {
   const [savingScore, setSavingScore] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // For 008 SCHEDULE tab
-  const [scheduleSlots, setScheduleSlots] = useState<ScheduleSlot[]>([])
-  const [savingSchedule, setSavingSchedule] = useState(false)
   const [showCreatedBanner, setShowCreatedBanner] = useState(false)
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
 
@@ -208,15 +207,6 @@ export default function TournamentPage() {
       return
     }
     setTournament(t as unknown as Tournament)
-
-    // 009: load persisted schedule_slots if present (JSON in tournament_details)
-    const loadedDetail = Array.isArray(t.tournament_details) ? t.tournament_details[0] : t.tournament_details
-    if (loadedDetail?.schedule_slots) {
-      try {
-        const parsed = JSON.parse(loadedDetail.schedule_slots)
-        if (Array.isArray(parsed)) setScheduleSlots(parsed)
-      } catch (e) { /* ignore bad JSON */ }
-    }
 
     const { data: regs } = await supabase
       .from('registrations')
@@ -241,7 +231,7 @@ export default function TournamentPage() {
 
     const { data: m } = await supabase
       .from('matches')
-      .select('id, round_number, draw_segment, division, player1_id, player2_id, winner_id, score, match_index, next_match_id')
+      .select('id, round_number, draw_segment, division, player1_id, player2_id, winner_id, score, match_index, next_match_id, scheduled_time, court_id')
       .eq('tournament_id', id)
       .order('round_number')
       .order('match_index')
@@ -307,42 +297,6 @@ export default function TournamentPage() {
     if (genErr) { setError(genErr); setGeneratingDraw(false); return }
     await fetchAll()
     setGeneratingDraw(false)
-  }
-
-  // 008: basic scheduling
-  async function generateSchedule() {
-    if (!detail) return
-    setSavingSchedule(true)
-    setError(null)
-    const slots = generateBasicSchedule(detail, registrations)
-    setScheduleSlots(slots)
-    // 009: persist to tournament_details.schedule_slots as JSON
-    try {
-      const supabase = createClient()
-      await supabase
-        .from('tournament_details')
-        .update({ schedule_slots: JSON.stringify(slots) })
-        .eq('tournament_id', id)
-    } catch (e: any) {
-      setError('Failed to persist schedule: ' + (e?.message || e))
-    }
-    setSavingSchedule(false)
-  }
-
-  function editSlot(index: number, field: 'player1_id' | 'player2_id', value: string | null) {
-    setScheduleSlots(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], [field]: value }
-      return next
-    })
-  }
-
-  function clearSlot(index: number) {
-    setScheduleSlots(prev => {
-      const next = [...prev]
-      next[index] = { ...next[index], player1_id: null, player2_id: null }
-      return next
-    })
   }
 
   async function saveScore() {
@@ -466,126 +420,74 @@ export default function TournamentPage() {
           <OverviewTab tournament={tournament} detail={detail ?? null} registrationCount={registrations.length} />
         )}
 
-        {/* ── SCHEDULE (008) ─────────────────────────────────────────────── */}
-        {activeTab === 'SCHEDULE' && (
-          <div>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <p className="text-neutral-500 text-sm">Proposed court/time slots based on wizard schedule rules</p>
-                {scheduleSlots.length > 0 && (
-                  <p className="text-xs text-neutral-600 mt-1">{scheduleSlots.length} slots generated</p>
-                )}
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={generateSchedule}
-                  disabled={savingSchedule || !detail}
-                  className="bg-red-700 hover:bg-red-600 disabled:opacity-40 text-white text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl transition"
-                >
-                  {savingSchedule ? 'GENERATING...' : 'GENERATE / REGENERATE SCHEDULE'}
-                </button>
-                {scheduleSlots.length > 0 && (
-                  <button
-                    onClick={async () => {
-                      try {
-                        const supabase = createClient()
-                        await supabase
-                          .from('tournament_details')
-                          .update({ schedule_slots: JSON.stringify(scheduleSlots) })
-                          .eq('tournament_id', id)
-                        alert('Schedule persisted to DB')
-                      } catch (e: any) {
-                        setError('Persist failed: ' + (e?.message || ''))
-                      }
-                    }}
-                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 transition"
-                  >
-                    SAVE SCHEDULE TO DB
-                  </button>
-                )}
-                {scheduleSlots.length > 0 && matches.length === 0 && (
-                  <button
-                    onClick={async () => {
-                      setSavingSchedule(true)
-                      const supabase = createClient()
-                      const inserts = scheduleSlots.map((s, i) => ({
-                        tournament_id: id,
-                        round_number: 1,
-                        draw_segment: 'main',
-                        division: registrations[0]?.division || 'Open',
-                        player1_id: s.player1_id || null,
-                        player2_id: s.player2_id || null,
-                        match_index: i,
-                      }))
-                      const { error: insErr } = await supabase.from('matches').insert(inserts)
-                      if (insErr) setError(insErr.message)
-                      else await fetchAll()
-                      setSavingSchedule(false)
-                    }}
-                    className="border border-neutral-700 text-neutral-400 text-xs font-bold tracking-widest px-4 py-2.5 rounded-xl hover:border-neutral-500 transition"
-                  >
-                    CREATE MATCHES FROM SLOTS
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {scheduleSlots.length === 0 ? (
+        {/* ── SCHEDULE ───────────────────────────────────────────────────── */}
+        {activeTab === 'SCHEDULE' && (() => {
+          // Group matches with a scheduled_time by day then by court
+          const scheduled = matches.filter(m => m.scheduled_time)
+          if (scheduled.length === 0) {
+            return (
               <div className="border border-dashed border-neutral-800 rounded-2xl py-16 text-center">
-                <p className="text-neutral-500 text-sm">No schedule generated yet.</p>
-                <p className="text-neutral-700 text-xs mt-2">Click generate to create slots from the tournament's day schedule, courts, and rules.</p>
+                <p className="text-neutral-500 text-sm">No scheduled matches yet.</p>
+                <p className="text-neutral-700 text-xs mt-2">Generate the draw first — the scheduler assigns times and courts automatically.</p>
               </div>
-            ) : (
-              <div className="space-y-8">
-                {Object.entries(
-                  scheduleSlots.reduce((acc: any, slot) => {
-                    (acc[slot.dayLabel] ||= []).push(slot)
-                    return acc
-                  }, {})
-                ).map(([dayLabel, daySlots]: [string, any]) => (
-                  <div key={dayLabel}>
-                    <p className="text-[10px] font-bold tracking-widest text-neutral-500 mb-3">{dayLabel.toUpperCase()}</p>
-                    <div className="grid gap-2">
-                      {daySlots.map((slot: ScheduleSlot, idx: number) => {
-                        const globalIdx = scheduleSlots.indexOf(slot)
-                        return (
-                          <div key={globalIdx} className="bg-neutral-900 border border-neutral-800 rounded-2xl p-4 flex items-center gap-4 text-sm">
-                            <div className="w-16 text-[10px] font-bold tracking-widest text-neutral-500">Court {slot.court}</div>
-                            <div className="font-mono text-xs text-neutral-400">{slot.start_time} – {slot.end_time}</div>
-                            <div className="flex-1 flex gap-3 items-center">
-                              <select
-                                className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs"
-                                value={slot.player1_id || ''}
-                                onChange={e => editSlot(globalIdx, 'player1_id', e.target.value || null)}
-                              >
-                                <option value="">TBD</option>
-                                {registrations.map(r => (
-                                  <option key={r.id} value={r.user_id}>{r.first_name} {r.last_name}</option>
-                                ))}
-                              </select>
-                              <span className="text-neutral-600">vs</span>
-                              <select
-                                className="bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs"
-                                value={slot.player2_id || ''}
-                                onChange={e => editSlot(globalIdx, 'player2_id', e.target.value || null)}
-                              >
-                                <option value="">TBD</option>
-                                {registrations.map(r => (
-                                  <option key={r.id} value={r.user_id}>{r.first_name} {r.last_name}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <button onClick={() => clearSlot(globalIdx)} className="text-xs text-neutral-500 hover:text-red-400">clear</button>
-                          </div>
-                        )
-                      })}
-                    </div>
+            )
+          }
+          // Build day → court → matches structure
+          const byDay: Record<string, Record<string, Match[]>> = {}
+          for (const m of scheduled) {
+            const dt = new Date(m.scheduled_time!)
+            const dayKey = dt.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+            const courtKey = `Court ${m.court_id ?? '?'}`
+            if (!byDay[dayKey]) byDay[dayKey] = {}
+            if (!byDay[dayKey][courtKey]) byDay[dayKey][courtKey] = []
+            byDay[dayKey][courtKey].push(m)
+          }
+          // Sort within each court by scheduled_time
+          for (const day of Object.values(byDay)) {
+            for (const courtMatches of Object.values(day)) {
+              courtMatches.sort((a, b) => new Date(a.scheduled_time!).getTime() - new Date(b.scheduled_time!).getTime())
+            }
+          }
+          return (
+            <div className="space-y-10">
+              {Object.entries(byDay).map(([dayLabel, courts]) => (
+                <div key={dayLabel}>
+                  <p className="text-[10px] font-bold tracking-widest text-neutral-400 mb-4 uppercase">{dayLabel}</p>
+                  <div className="space-y-6">
+                    {Object.entries(courts).sort(([a], [b]) => a.localeCompare(b)).map(([courtLabel, courtMatches]) => (
+                      <div key={courtLabel}>
+                        <p className="text-[10px] font-bold tracking-widest text-neutral-600 mb-2 uppercase">{courtLabel}</p>
+                        <div className="grid gap-2">
+                          {courtMatches.map(m => {
+                            const dt = new Date(m.scheduled_time!)
+                            const time = dt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                            const p1 = m.player1_id ? (playerMap[m.player1_id] ?? 'TBD') : 'BYE'
+                            const p2 = m.player2_id ? (playerMap[m.player2_id] ?? 'TBD') : 'BYE'
+                            const segLabel = m.draw_segment === 'plate' ? ' [Plate]' : ''
+                            return (
+                              <div key={m.id} className="bg-neutral-900 border border-neutral-800 rounded-2xl px-4 py-3 flex items-center gap-4 text-sm">
+                                <div className="w-12 font-mono text-xs text-neutral-400 shrink-0">{time}</div>
+                                <div className="w-20 text-[10px] font-bold tracking-widest text-red-500 shrink-0 uppercase">{m.division}{segLabel}</div>
+                                <div className="flex-1 flex items-center gap-2 min-w-0">
+                                  <span className="truncate text-white">{p1}</span>
+                                  <span className="text-neutral-600 shrink-0">vs</span>
+                                  <span className="truncate text-white">{p2}</span>
+                                </div>
+                                {m.winner_id && (
+                                  <div className="text-[10px] font-bold tracking-widest text-green-500 shrink-0">DONE</div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
+                </div>
+              ))}
+            </div>
+          )
+        })()}
 
         {/* ── REGISTRATIONS ─────────────────────────────────────────────── */}
         {activeTab === 'REGISTRATIONS' && (
