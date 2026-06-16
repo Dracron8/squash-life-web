@@ -69,15 +69,14 @@
   --sl-progress-track: rgba(255, 255, 255, 0.05);
 }
 
+/* Light theme (default) — Assistant font everywhere */
+body, h1, h2, h3, h4, h5, h6, button, input, label, select, textarea {
+  font-family: 'Assistant', sans-serif;
+}
+
 body {
   background-color: var(--sl-bg);
   color: var(--sl-text);
-  font-family: Arial, Helvetica, sans-serif;
-}
-
-/* Light theme (default) uses Assistant font (SQSH.LIFE brand) */
-body, h1, h2, h3, h4, h5, h6, button, input, label {
-  font-family: 'Assistant', sans-serif;
 }
 
 [data-theme="dark"] body,

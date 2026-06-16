@@ -191,6 +191,7 @@ export default function TournamentPage() {
   const [showUpdatedBanner, setShowUpdatedBanner] = useState(false)
   const [userId, setUserId] = useState<string | null>(null)
   const [activeDraw, setActiveDraw] = useState<'main' | 'plate'>('main')
+  const [playerDivFilter, setPlayerDivFilter] = useState('')
 
 
   const fetchAll = useCallback(async () => {
@@ -357,6 +358,8 @@ export default function TournamentPage() {
   // Div counts
   const divCounts: Record<string, number> = {}
   registrations.forEach(r => { if (r.division) divCounts[r.division] = (divCounts[r.division] || 0) + 1 })
+
+  const filteredRegs = playerDivFilter ? registrations.filter(r => r.division === playerDivFilter) : registrations
 
   return (
     <div>
@@ -542,54 +545,83 @@ export default function TournamentPage() {
               </div>
             </div>
 
-            {/* Division summary */}
-            {divs.length > 0 && (
-              <div className="flex flex-wrap gap-2 mb-5">
+            {/* Division filter tabs */}
+            {divs.length > 1 && (
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+                <button
+                  onClick={() => setPlayerDivFilter('')}
+                  style={{
+                    fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                    padding: '5px 14px', borderRadius: 999, cursor: 'pointer', border: 'none',
+                    background: playerDivFilter === '' ? 'var(--sl-accent)' : '#ffffff',
+                    color: playerDivFilter === '' ? '#ffffff' : 'var(--sl-accent)',
+                    outline: playerDivFilter === '' ? 'none' : '1px solid var(--sl-accent)',
+                  }}
+                >ALL</button>
                 {divs.map(d => (
-                  <div key={d} className="bg-neutral-900 border border-neutral-800 rounded-lg px-3 py-1.5 text-xs">
-                    <span className="font-bold text-red-500">{d}</span>
-                    <span className="text-neutral-500 ml-2">{divCounts[d] ?? 0} players</span>
-                  </div>
+                  <button key={d} onClick={() => setPlayerDivFilter(d === playerDivFilter ? '' : d)}
+                    style={{
+                      fontSize: 11, fontWeight: 700, letterSpacing: '0.08em',
+                      padding: '5px 14px', borderRadius: 999, cursor: 'pointer', border: 'none',
+                      background: playerDivFilter === d ? 'var(--sl-accent)' : '#ffffff',
+                      color: playerDivFilter === d ? '#ffffff' : 'var(--sl-accent)',
+                      outline: playerDivFilter === d ? 'none' : '1px solid var(--sl-accent)',
+                    }}
+                  >
+                    {d} <span style={{ fontWeight: 400, opacity: 0.7, marginLeft: 4 }}>{divCounts[d] ?? 0}</span>
+                  </button>
                 ))}
               </div>
             )}
 
             {registrations.length === 0 ? (
-              <div className="border border-dashed border-neutral-800 rounded-2xl py-16 text-center">
-                <p className="text-neutral-500 text-sm">No registrations yet.</p>
+              <div style={{ border: '1px dashed var(--sl-border)', borderRadius: 12, padding: '64px 24px', textAlign: 'center' }}>
+                <p style={{ color: 'var(--sl-text-50)', fontSize: 14 }}>No registrations yet.</p>
                 {tournament.status === 'setup_pending' && (
-                  <p className="text-neutral-700 text-xs mt-2">Open registration so players can sign up.</p>
+                  <p style={{ color: 'var(--sl-text-30)', fontSize: 12, marginTop: 8 }}>Open registration so players can sign up.</p>
                 )}
               </div>
             ) : (
-              <div className="overflow-x-auto rounded-2xl border border-neutral-800">
-                <table className="w-full text-sm">
+              <div style={{ overflowX: 'auto', border: '1px solid var(--sl-border)', borderRadius: 8 }}>
+                <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
                   <thead>
-                    <tr className="border-b border-neutral-800 bg-neutral-900">
+                    <tr style={{ borderBottom: '1px solid var(--sl-border)', background: '#ffffff' }}>
                       {['NAME', 'DIV', 'USR', 'CLUB', 'PAYMENT', 'DATE'].map(h => (
-                        <th key={h} className="text-left text-[10px] font-bold tracking-widest text-neutral-500 px-4 py-3">{h}</th>
+                        <th key={h} style={{ textAlign: 'left', fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'var(--sl-text-50)', padding: '10px 16px' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {registrations.map((r, i) => (
-                      <tr key={r.id} className={`border-b border-neutral-800 last:border-0 ${i % 2 === 0 ? '' : 'bg-neutral-900/50'}`}>
-                        <td className="px-4 py-3 font-medium text-neutral-100">{r.first_name} {r.last_name}</td>
-                        <td className="px-4 py-3">
-                          <span className="text-[10px] font-bold tracking-widest text-red-500">{r.division ?? '—'}</span>
+                    {filteredRegs.map((r) => (
+                      <tr key={r.id} style={{ borderBottom: '1px solid var(--sl-border)', background: '#ffffff' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'var(--sl-surface)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = '#ffffff')}>
+                        <td style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--sl-text)' }}>{r.first_name} {r.last_name}</td>
+                        <td style={{ padding: '10px 16px' }}>
+                          {r.division ? (
+                            <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: 999, background: 'var(--sl-accent)', color: '#ffffff', fontSize: 11, fontWeight: 700 }}>{r.division}</span>
+                          ) : '—'}
                         </td>
-                        <td className="px-4 py-3 text-neutral-400">{r.usr_rating ?? '—'}</td>
-                        <td className="px-4 py-3 text-neutral-500 text-xs">{r.club_name || '—'}</td>
-                        <td className="px-4 py-3">
+                        <td style={{ padding: '10px 16px', fontWeight: 700, color: 'var(--sl-text)' }}>{r.usr_rating ?? '—'}</td>
+                        <td style={{ padding: '10px 16px', color: 'var(--sl-text-50)', fontSize: 12 }}>{r.club_name || '—'}</td>
+                        <td style={{ padding: '10px 16px' }}>
                           <button onClick={() => cyclePayment(r.id, r.payment_status)}
-                            className="flex items-center gap-1.5 hover:opacity-70 transition">
-                            <span className={`w-2 h-2 rounded-full ${dotColor(r.payment_status)}`} />
-                            <span className={`text-[10px] font-bold tracking-widest ${PAY_COLOR[r.payment_status] ?? 'text-neutral-500'}`}>
-                              {r.payment_status.replace(/_/g, ' ').toUpperCase()}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                            <span style={{
+                              display: 'inline-block',
+                              padding: '3px 10px',
+                              borderRadius: 999,
+                              fontSize: 10,
+                              fontWeight: 700,
+                              letterSpacing: '0.05em',
+                              background: ['fully_paid', 'paid'].includes(r.payment_status) ? '#16a34a' : '#ea580c',
+                              color: '#ffffff',
+                            }}>
+                              {['fully_paid', 'paid'].includes(r.payment_status) ? 'PAID' : r.payment_status.replace(/_/g, ' ').toUpperCase()}
                             </span>
                           </button>
                         </td>
-                        <td className="px-4 py-3 text-neutral-600 text-xs">
+                        <td style={{ padding: '10px 16px', color: 'var(--sl-text-50)', fontSize: 12 }}>
                           {r.created_at ? new Date(r.created_at).toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }) : '—'}
                         </td>
                       </tr>
@@ -958,15 +990,19 @@ function SettCheck({ value, onChange, label }: { value: boolean; onChange: (v: b
 
 // ─── Bracket Components ────────────────────────────────────────────────────────
 
-function fmtCourtTime(m: Match): string {
-  if (!m.scheduled_time) return ''
-  const dt = new Date(m.scheduled_time)
-  const h = dt.getHours()
-  const min = dt.getMinutes().toString().padStart(2, '0')
-  const ampm = h >= 12 ? 'pm' : 'am'
-  const h12 = h % 12 === 0 ? 12 : h % 12
-  const court = m.court_id ?? '?'
-  return `Court ${court} · ${h12}:${min}${ampm}`
+function parseSidebarInfo(m: Match): { court: string; time: string } {
+  let court = ''
+  let time = ''
+  if (m.court_id) court = `COURT ${m.court_id}`
+  if (m.scheduled_time) {
+    const dt = new Date(m.scheduled_time)
+    const h = dt.getHours()
+    const min = dt.getMinutes().toString().padStart(2, '0')
+    const ampm = h >= 12 ? 'pm' : 'am'
+    const h12 = h % 12 === 0 ? 12 : h % 12
+    time = `${h12}:${min}${ampm}`
+  }
+  return { court, time }
 }
 
 function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
@@ -978,52 +1014,101 @@ function MatchCard({ m, playerMap, loggedInUserId, onMatchTap }: {
   const p1w = m.winner_id === m.player1_id && m.winner_id !== null
   const p2w = m.winner_id === m.player2_id && m.winner_id !== null
   const canTap = onMatchTap && (m.player1_id || m.player2_id)
-  const slot = fmtCourtTime(m)
+  const { court, time } = parseSidebarInfo(m)
 
-  function renderPlayer(uid: string | null, isWinner: boolean) {
+  function renderRow(uid: string | null, isWinner: boolean) {
     const isMe = uid !== null && uid === loggedInUserId
-    if (uid === null) {
-      return <span className="text-[10px] italic text-gray-300">tbd</span>
-    }
-    const name = playerMap[uid] ?? uid.slice(0, 8) + '…'
+    const nameStr = uid === null ? null : (playerMap[uid] ?? uid.slice(0, 8) + '…')
     return (
-      <span className={`text-[11px] truncate max-w-[130px] inline-block ${
-        isWinner ? 'text-red-600 font-bold' : 'text-gray-700 font-medium'
-      } ${isMe ? 'font-black' : ''}`}>
-        {name}
-      </span>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '7px 10px',
+        background: isWinner ? 'var(--sl-accent)' : '#ffffff',
+        minHeight: 34,
+        minWidth: 0,
+      }}>
+        <span style={{
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          fontSize: 12,
+          fontWeight: isWinner ? 700 : (isMe ? 700 : 400),
+          color: isWinner ? '#ffffff' : (nameStr ? 'var(--sl-text)' : 'var(--sl-text-30)'),
+          fontStyle: nameStr ? 'normal' : 'italic',
+          fontFamily: "'Assistant', sans-serif",
+        }}>
+          {nameStr ?? 'tbd'}
+        </span>
+        {isWinner && m.score && (
+          <span style={{ fontSize: 10, color: '#ffffff', marginLeft: 6, whiteSpace: 'nowrap', flexShrink: 0, opacity: 0.85 }}>
+            {m.score}
+          </span>
+        )}
+      </div>
     )
   }
 
   return (
     <div
       onClick={canTap ? () => onMatchTap!(m) : undefined}
-      className={`w-44 bg-white rounded-xl overflow-hidden transition ${
-        m.winner_id ? 'ring-1 ring-red-100 shadow-sm' : 'ring-1 ring-gray-100 shadow-sm'
-      } ${canTap ? 'cursor-pointer hover:shadow-md hover:ring-red-300' : ''}`}
+      style={{
+        minWidth: 180,
+        border: '1px solid var(--sl-border)',
+        borderRadius: 8,
+        overflow: 'hidden',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+        display: 'flex',
+        cursor: canTap ? 'pointer' : 'default',
+        background: '#ffffff',
+        transition: 'box-shadow 0.15s',
+      }}
     >
-      {/* Player 1 */}
-      <div className={`flex items-center justify-between px-3 py-2.5 border-b border-gray-50 ${p1w ? 'bg-red-50' : 'bg-white'}`}>
-        {renderPlayer(m.player1_id, p1w)}
-        <div className="flex items-center gap-1 ml-1 shrink-0">
-          {p1w && m.score && <span className="text-[9px] text-gray-400 font-mono">{m.score}</span>}
-          {p1w && !m.score && <span className="text-[10px] text-red-500 font-bold">✓</span>}
-        </div>
-      </div>
-      {/* Player 2 */}
-      <div className={`flex items-center justify-between px-3 py-2.5 ${p2w ? 'bg-red-50' : 'bg-white'}`}>
-        {renderPlayer(m.player2_id, p2w)}
-        <div className="flex items-center gap-1 ml-1 shrink-0">
-          {p2w && m.score && <span className="text-[9px] text-gray-400 font-mono">{m.score}</span>}
-          {p2w && !m.score && <span className="text-[10px] text-red-500 font-bold">✓</span>}
-        </div>
-      </div>
-      {/* Court / time footer */}
-      {slot && (
-        <div className="px-3 py-1.5 border-t border-gray-100 bg-gray-50">
-          <span className="text-[9px] text-gray-400 font-mono tracking-wide">{slot}</span>
+      {/* Left sidebar: court + time */}
+      {(court || time) && (
+        <div style={{
+          width: 36,
+          background: 'var(--sl-surface)',
+          borderRight: '1px solid var(--sl-border)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '6px 3px',
+          gap: 3,
+          flexShrink: 0,
+        }}>
+          {court && (
+            <span style={{
+              fontSize: 7,
+              fontWeight: 700,
+              textTransform: 'uppercase',
+              letterSpacing: '0.03em',
+              color: 'var(--sl-text-50)',
+              writingMode: 'vertical-rl',
+              transform: 'rotate(180deg)',
+              lineHeight: 1.2,
+            }}>{court}</span>
+          )}
+          {time && (
+            <span style={{
+              fontSize: 7,
+              color: 'var(--sl-text-50)',
+              writingMode: 'vertical-rl',
+              transform: 'rotate(180deg)',
+              lineHeight: 1.2,
+            }}>{time}</span>
+          )}
         </div>
       )}
+      {/* Player rows */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        {renderRow(m.player1_id, p1w)}
+        <div style={{ height: 1, background: 'var(--sl-border)', flexShrink: 0 }} />
+        {renderRow(m.player2_id, p2w)}
+      </div>
     </div>
   )
 }
@@ -1086,7 +1171,7 @@ function BracketConnector({ leftCount, rightCount, colH }: {
       <div style={{ height: LABEL_H }} />
       <svg width={W} height={colH} style={{ display: 'block' }}>
         {lines.map((d, i) => (
-          <path key={i} d={d} stroke="#cbd5e1" strokeWidth="1.5" fill="none"
+          <path key={i} d={d} stroke="var(--sl-border)" strokeWidth="1" fill="none"
             strokeLinecap="round" strokeLinejoin="round" />
         ))}
       </svg>
@@ -1194,6 +1279,7 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
   const [pan, setPan] = React.useState({ x: 0, y: 0 })
   const dragging = React.useRef(false)
   const lastMouse = React.useRef({ x: 0, y: 0 })
+  const minScale = React.useRef(1)
   // Fixed container height set once on mount — must NOT scale with zoom to prevent page scroll
   const [containerH, setContainerH] = React.useState<number | 'auto'>('auto')
 
@@ -1204,6 +1290,7 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
     const contentH = innerRef.current.scrollHeight
     if (contentW > availW && contentW > 0) {
       const initialScale = availW / contentW
+      minScale.current = initialScale
       setScale(initialScale)
       // Fix container height at initial fit — zoom changes scale but not outer height
       setContainerH(Math.ceil(contentH * initialScale) + 32)
@@ -1215,7 +1302,7 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
   function onWheel(e: React.WheelEvent) {
     e.preventDefault()
     const factor = e.deltaY < 0 ? 1.1 : 0.9
-    setScale(s => Math.max(0.15, Math.min(3, s * factor)))
+    setScale(s => Math.max(minScale.current, Math.min(3, s * factor)))
   }
 
   function onMouseDown(e: React.MouseEvent) {
