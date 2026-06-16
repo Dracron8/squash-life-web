@@ -365,25 +365,25 @@ export default function TournamentPage() {
     <div>
       {/* Tournament header */}
       <div className="border-b border-[var(--sl-border)] px-6 pt-8 pb-0 max-w-5xl mx-auto">
-        <Link href="/td" className="text-xs text-[var(--sl-text-30)] hover:text-[var(--sl-text-80)] transition">← MY TOURNAMENTS</Link>
-        <div className="flex items-start gap-4 mt-3 mb-6">
+        <Link href="/td" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sl-text-30)', textDecoration: 'none' }}>← MY TOURNAMENTS</Link>
+        <div className="flex items-start gap-4 mt-4 mb-6">
           <div className="flex-1 min-w-0">
-            <h1 className="text-xl font-bold tracking-wide truncate">{tournament.name}</h1>
+            <h1 style={{ fontSize: 30, fontWeight: 800, lineHeight: 1.1, color: 'var(--sl-text)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{tournament.name}</h1>
             {detail && (
-              <p className="text-[var(--sl-text-50)] text-xs mt-1">
+              <p style={{ fontSize: 14, color: 'var(--sl-text-50)', marginTop: 6, lineHeight: 1.4 }}>
                 {detail.start_date ? new Date(detail.start_date).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Date TBD'}
                 {detail.clubs?.name ? ` · ${detail.clubs.name}` : ''}
                 {detail.courts_available ? ` · ${detail.courts_available} courts` : ''}
               </p>
             )}
           </div>
-          <div className="flex flex-col items-end gap-2 shrink-0">
+          <div className="flex flex-col items-end gap-2 shrink-0" style={{ paddingTop: 4 }}>
             <span className={`text-[10px] font-bold tracking-widest px-3 py-1.5 rounded border ${STATUS_COLOR[tournament.status] ?? STATUS_COLOR.setup_pending}`}>
               {STATUS_LABEL[tournament.status] ?? tournament.status.toUpperCase()}
             </span>
             <Link
               href={`/td/tournaments/new?edit=${tournament.id}`}
-              className="text-[10px] font-bold tracking-widest text-[var(--sl-accent)] border border-[var(--sl-accent-30)] hover:bg-[var(--sl-accent-10)] px-3 py-1 rounded-lg transition"
+              style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--sl-accent)', border: '1px solid var(--sl-accent-30)', borderRadius: 6, padding: '4px 12px', textDecoration: 'none' }}
             >
               EDIT SETUP
             </Link>
@@ -391,12 +391,22 @@ export default function TournamentPage() {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-1">
+        <div className="flex gap-0">
           {TABS.map(tab => (
             <button key={tab} onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2.5 text-[11px] font-bold tracking-widest transition border-b-2 -mb-px ${
-                activeTab === tab ? 'border-[var(--sl-accent)] text-[var(--sl-accent)]' : 'border-transparent text-[var(--sl-text-50)] hover:text-[var(--sl-text-80)]'
-              }`}>
+              style={{
+                padding: '10px 18px',
+                fontSize: 12,
+                fontWeight: 700,
+                letterSpacing: '0.08em',
+                border: 'none',
+                borderBottom: activeTab === tab ? '2px solid var(--sl-accent)' : '2px solid transparent',
+                marginBottom: -1,
+                background: 'none',
+                color: activeTab === tab ? 'var(--sl-accent)' : 'var(--sl-text-50)',
+                cursor: 'pointer',
+                transition: 'color 0.15s',
+              }}>
               {tab}
             </button>
           ))}

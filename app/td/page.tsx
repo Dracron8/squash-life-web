@@ -133,7 +133,7 @@ export default async function TDDashboard() {
           </Link>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           {list.map(t => {
             const detail = t.tournament_details?.[0]
             const count = regCounts[t.id] ?? 0
@@ -144,9 +144,9 @@ export default async function TDDashboard() {
                 style={{
                   background: '#ffffff',
                   borderRadius: 12,
-                  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                  boxShadow: '0 2px 16px rgba(0,0,0,0.07)',
                   borderLeft: '4px solid var(--sl-accent)',
-                  padding: '18px 20px',
+                  padding: '20px 24px',
                   display: 'flex',
                   alignItems: 'flex-start',
                   justifyContent: 'space-between',
@@ -157,16 +157,21 @@ export default async function TDDashboard() {
                   href={`/td/tournaments/${t.id}`}
                   style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}
                 >
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--sl-text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--sl-text)', marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', lineHeight: 1.2 }}>
                     {t.name}
                   </div>
-                  <div style={{ fontSize: 13, color: 'var(--sl-text-50)', marginBottom: 2 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--sl-text-50)', marginBottom: 4 }}>
                     {detail?.clubs?.name ?? 'Venue TBD'}
                     {detail?.clubs?.city ? ` · ${detail.clubs.city}` : ''}
                     {dateStr ? ` · ${dateStr}` : ''}
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--sl-text-60)' }}>
-                    {count} registered · {t.draw_type}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, color: 'var(--sl-text-30)' }}>
+                      {count} registered
+                    </span>
+                    <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--sl-accent)', background: 'var(--sl-accent-10)', padding: '2px 8px', borderRadius: 4 }}>
+                      {t.draw_type}
+                    </span>
                   </div>
                 </Link>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
