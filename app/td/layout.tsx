@@ -19,21 +19,21 @@ export default async function TDLayout({ children }: { children: React.ReactNode
 
   return (
     <div data-td-light className="min-h-screen bg-white text-neutral-900">
-      <nav className="border-b border-gray-100 px-6 py-4 flex items-center justify-between sticky top-0 z-40 bg-white shadow-sm">
-        <div className="flex items-center gap-8">
-          <Link href="/td" className="flex items-center">
-            <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" className="h-9 w-auto" />
+      <nav style={{ borderBottom: '2px solid var(--sl-accent)', padding: '0 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 40, background: '#ffffff', height: 56 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+          <Link href="/td" style={{ display: 'flex', alignItems: 'center' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" style={{ height: 32, width: 'auto' }} />
           </Link>
-          <div className="flex items-center gap-6">
-            <Link href="/td" className="text-xs font-black tracking-widest text-gray-600 hover:text-gray-900 transition-colors">
-              MY TOURNAMENTS
-            </Link>
-            <Link href="/td/tournaments/new" className="text-xs font-black tracking-widest text-red-600 hover:text-red-700 transition-colors">
-              + NEW
-            </Link>
-          </div>
+          <span style={{ color: 'var(--sl-border)', userSelect: 'none' }}>|</span>
+          <Link href="/td" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sl-text)', textDecoration: 'none', textTransform: 'uppercase' }}>
+            My Tournaments
+          </Link>
+          <Link href="/td/tournaments/new" style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.1em', color: 'var(--sl-accent)', textDecoration: 'none', textTransform: 'uppercase' }}>
+            + New
+          </Link>
         </div>
-        <Link href="/dashboard" className="text-xs font-medium text-gray-400 hover:text-gray-700 transition-colors">
+        <Link href="/dashboard" style={{ fontSize: 12, color: 'var(--sl-text-50)', textDecoration: 'none' }}>
           Player Dashboard →
         </Link>
       </nav>

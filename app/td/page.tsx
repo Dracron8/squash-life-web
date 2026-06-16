@@ -30,18 +30,23 @@ const STATUS_LABEL: Record<string, string> = {
   completed:         'DONE',
 }
 
-const STATUS_BADGE: Record<string, string> = {
-  setup_pending:     'bg-gray-100 text-gray-500 border border-gray-200',
-  registration_open: 'bg-green-50 text-green-700 border border-green-200',
-  active:            'bg-red-600 text-white border border-red-600',
-  completed:         'bg-gray-50 text-gray-400 border border-gray-200',
-}
-
-const ACCENT_BAR: Record<string, string> = {
-  setup_pending:     'bg-gray-200',
-  registration_open: 'bg-green-400',
-  active:            'bg-red-600',
-  completed:         'bg-gray-200',
+function statusBadge(status: string) {
+  const label = STATUS_LABEL[status] ?? status.toUpperCase()
+  const isActive = status === 'active'
+  const isOpen = status === 'registration_open'
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '3px 10px',
+      borderRadius: 999,
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: '0.06em',
+      background: isActive ? 'var(--sl-accent)' : isOpen ? '#16a34a' : 'var(--sl-surface)',
+      color: (isActive || isOpen) ? '#ffffff' : 'var(--sl-text-50)',
+      border: (isActive || isOpen) ? 'none' : '1px solid var(--sl-border)',
+    }}>{label}</span>
+  )
 }
 
 export default async function TDDashboard() {
@@ -70,99 +75,118 @@ export default async function TDDashboard() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-12">
+    <div style={{ maxWidth: 860, margin: '0 auto', padding: '48px 24px', fontFamily: "'Assistant', sans-serif" }}>
 
-      {/* ── Page header ── */}
-      <div className="flex items-end justify-between mb-10 gap-4">
+      {/* Page header */}
+      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: 40, gap: 16 }}>
         <div>
-          <p className="text-xs font-black tracking-[0.2em] text-red-600 uppercase mb-2">
+          <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--sl-text-50)', margin: '0 0 6px' }}>
             Tournament Director
           </p>
-          <h1 className="text-[2.75rem] font-black tracking-tight text-gray-900 leading-none">
+          <h1 style={{ fontSize: 36, fontWeight: 800, color: 'var(--sl-text)', lineHeight: 1.1, margin: 0 }}>
             My Tournaments
           </h1>
         </div>
         <Link
           href="/td/tournaments/new"
-          className="shrink-0 bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-black tracking-widest text-sm px-7 py-3.5 rounded-2xl transition-colors shadow-lg shadow-red-600/25"
+          style={{
+            background: 'var(--sl-accent)',
+            color: '#ffffff',
+            fontWeight: 700,
+            fontSize: 13,
+            letterSpacing: '0.05em',
+            padding: '12px 24px',
+            borderRadius: 8,
+            textDecoration: 'none',
+            display: 'inline-block',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
         >
           + CREATE TOURNAMENT
         </Link>
       </div>
 
-      {/* ── Empty state ── */}
+      {/* Empty state */}
       {list.length === 0 ? (
-        <div className="border-2 border-dashed border-gray-200 rounded-3xl py-28 text-center">
-          <p className="text-3xl font-black text-gray-200 mb-3">No tournaments yet</p>
-          <p className="text-gray-400 text-sm mb-10">Create your first tournament to get started.</p>
+        <div style={{ textAlign: 'center', padding: '80px 24px', border: '2px dashed var(--sl-border)', borderRadius: 16 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" style={{ height: 40, display: 'block', margin: '0 auto 20px', opacity: 0.4 }} />
+          <p style={{ color: 'var(--sl-text-50)', marginBottom: 24, fontSize: 15 }}>
+            No tournaments yet. Create your first one.
+          </p>
           <Link
             href="/td/tournaments/new"
-            className="bg-red-600 hover:bg-red-700 text-white font-black tracking-widest text-sm px-8 py-4 rounded-2xl transition-colors inline-block shadow-lg shadow-red-600/25"
+            style={{
+              background: 'var(--sl-accent)',
+              color: '#ffffff',
+              fontWeight: 700,
+              fontSize: 12,
+              letterSpacing: '0.08em',
+              padding: '12px 28px',
+              borderRadius: 8,
+              textDecoration: 'none',
+              display: 'inline-block',
+            }}
           >
             CREATE YOUR FIRST TOURNAMENT
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {list.map(t => {
             const detail = t.tournament_details?.[0]
             const count = regCounts[t.id] ?? 0
             const dateStr = fmtListDate(detail?.start_date, detail?.end_date)
-
             return (
               <div
                 key={t.id}
-                className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow"
+                style={{
+                  background: '#ffffff',
+                  borderRadius: 12,
+                  boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
+                  borderLeft: '4px solid var(--sl-accent)',
+                  padding: '18px 20px',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  justifyContent: 'space-between',
+                  gap: 16,
+                }}
               >
-                <div className="flex">
-                  {/* Left accent bar */}
-                  <div className={`w-1 flex-shrink-0 ${ACCENT_BAR[t.status] ?? ACCENT_BAR.setup_pending}`} />
-
-                  <div className="flex-1 flex items-center gap-4 px-6 py-5 min-w-0">
-                    {/* Tournament info — links to detail page */}
-                    <Link
-                      href={`/td/tournaments/${t.id}`}
-                      className="flex-1 min-w-0 block group"
-                    >
-                      <h2 className="text-base font-black text-gray-900 group-hover:text-red-600 transition-colors leading-snug truncate">
-                        {t.name}
-                      </h2>
-                      <div className="flex flex-wrap items-center gap-x-2 mt-1.5 text-sm text-gray-500">
-                        {detail?.clubs?.name && (
-                          <span className="font-semibold text-gray-700">{detail.clubs.name}</span>
-                        )}
-                        {detail?.clubs?.city && (
-                          <span className="text-gray-400">{detail.clubs.city}</span>
-                        )}
-                        {dateStr && (
-                          <>
-                            <span className="text-gray-200 select-none">·</span>
-                            <span>{dateStr}</span>
-                          </>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <span className="text-xs text-gray-400">{t.draw_type}</span>
-                        <span className="text-gray-200 select-none">·</span>
-                        <span className="text-xs font-bold text-gray-500">
-                          {count} player{count !== 1 ? 's' : ''}
-                        </span>
-                      </div>
-                    </Link>
-
-                    {/* Status badge + edit button */}
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <span className={`text-[10px] font-black tracking-widest px-2.5 py-1 rounded-lg ${STATUS_BADGE[t.status] ?? STATUS_BADGE.setup_pending}`}>
-                        {STATUS_LABEL[t.status] ?? t.status.toUpperCase()}
-                      </span>
-                      <Link
-                        href={`/td/tournaments/new?edit=${t.id}`}
-                        className="text-[10px] font-bold tracking-widest text-gray-500 hover:text-gray-900 border border-gray-200 hover:border-gray-400 px-3 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-                      >
-                        EDIT SETUP
-                      </Link>
-                    </div>
+                <Link
+                  href={`/td/tournaments/${t.id}`}
+                  style={{ flex: 1, minWidth: 0, textDecoration: 'none' }}
+                >
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--sl-text)', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {t.name}
                   </div>
+                  <div style={{ fontSize: 13, color: 'var(--sl-text-50)', marginBottom: 2 }}>
+                    {detail?.clubs?.name ?? 'Venue TBD'}
+                    {detail?.clubs?.city ? ` · ${detail.clubs.city}` : ''}
+                    {dateStr ? ` · ${dateStr}` : ''}
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--sl-text-60)' }}>
+                    {count} registered · {t.draw_type}
+                  </div>
+                </Link>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
+                  {statusBadge(t.status)}
+                  <Link
+                    href={`/td/tournaments/new?edit=${t.id}`}
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      letterSpacing: '0.08em',
+                      color: 'var(--sl-accent)',
+                      border: '1px solid var(--sl-accent)',
+                      borderRadius: 6,
+                      padding: '4px 12px',
+                      textDecoration: 'none',
+                      display: 'inline-block',
+                    }}
+                  >
+                    EDIT SETUP
+                  </Link>
                 </div>
               </div>
             )
