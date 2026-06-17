@@ -1348,21 +1348,34 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
     return () => el.removeEventListener('wheel', handler)
   }, [])
 
+  // Document-level listeners so drag continues even when cursor leaves the container
+  React.useEffect(() => {
+    function onMouseMove(e: MouseEvent) {
+      if (!dragging.current) return
+      txRef.current += e.clientX - lastMouse.current.x
+      tyRef.current += e.clientY - lastMouse.current.y
+      lastMouse.current = { x: e.clientX, y: e.clientY }
+      applyTransform()
+    }
+    function onMouseUp() {
+      if (!dragging.current) return
+      dragging.current = false
+      setIsDragging(false)
+    }
+    document.addEventListener('mousemove', onMouseMove)
+    document.addEventListener('mouseup', onMouseUp)
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove)
+      document.removeEventListener('mouseup', onMouseUp)
+    }
+  }, [])
+
   function onMouseDown(e: React.MouseEvent) {
+    e.preventDefault()
     dragging.current = true
     setIsDragging(true)
     lastMouse.current = { x: e.clientX, y: e.clientY }
   }
-
-  function onMouseMove(e: React.MouseEvent) {
-    if (!dragging.current) return
-    txRef.current += e.clientX - lastMouse.current.x
-    tyRef.current += e.clientY - lastMouse.current.y
-    lastMouse.current = { x: e.clientX, y: e.clientY }
-    applyTransform()
-  }
-
-  function onMouseUp() { dragging.current = false; setIsDragging(false) }
 
   return (
     <div
@@ -1370,9 +1383,6 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
       className="relative overflow-hidden w-full select-none"
       style={{ height: containerH, minHeight: 200, cursor: isDragging ? 'grabbing' : 'grab' }}
       onMouseDown={onMouseDown}
-      onMouseMove={onMouseMove}
-      onMouseUp={onMouseUp}
-      onMouseLeave={onMouseUp}
     >
       <div
         ref={innerRef}
