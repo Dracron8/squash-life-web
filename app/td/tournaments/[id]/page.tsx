@@ -223,13 +223,34 @@ export default function TournamentPage() {
     const regList = (regs ?? []) as Registration[]
 
     if (regList.length > 0) {
-      const { data: players } = await supabase
-        .from('players')
-        .select('user_id, club_name')
-        .in('user_id', regList.map(r => r.user_id))
+      const userIds = regList.map(r => r.user_id)
+
+      const [{ data: profileRows }, { data: players }] = await Promise.all([
+        supabase
+          .from('profiles')
+          .select('id, first_name, last_name, usr_rating')
+          .in('id', userIds),
+        supabase
+          .from('players')
+          .select('user_id, club_name')
+          .in('user_id', userIds),
+      ])
+
+      const profileMap: Record<string, { first_name: string; last_name: string; usr_rating: number | null }> = {}
+      for (const p of (profileRows ?? [])) {
+        profileMap[p.id] = { first_name: p.first_name ?? '', last_name: p.last_name ?? '', usr_rating: p.usr_rating ?? null }
+      }
+
       const clubMap: Record<string, string> = {}
       for (const p of (players ?? [])) clubMap[p.user_id] = p.club_name ?? ''
-      setRegistrations(regList.map(r => ({ ...r, club_name: clubMap[r.user_id] ?? '' })))
+
+      setRegistrations(regList.map(r => ({
+        ...r,
+        first_name: profileMap[r.user_id]?.first_name || r.first_name,
+        last_name:  profileMap[r.user_id]?.last_name  || r.last_name,
+        usr_rating: profileMap[r.user_id]?.usr_rating ?? r.usr_rating,
+        club_name:  clubMap[r.user_id] ?? '',
+      })))
     } else {
       setRegistrations([])
     }
