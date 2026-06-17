@@ -76,13 +76,24 @@ function registrationBadge(status: string) {
 export default async function TournamentsPage() {
   const supabase = await createClient()
 
-  const [{ data: tournaments }, { data: { user } }] = await Promise.all([
+  const [{ data: rawTournaments }, { data: { user } }] = await Promise.all([
     supabase
       .from('tournaments')
-      .select(`id, name, status, tournament_details (start_date, end_date, singles_fee, clubs (name))`)
-      .order('created_at', { ascending: false }),
+      .select(`id, name, status, tournament_details (start_date, end_date, singles_fee, clubs (name))`),
     supabase.auth.getUser(),
   ])
+
+  const statusPriority = (status: string) =>
+    status === 'registration_open' ? 0 : status === 'setup_pending' ? 1 : 2
+
+  const tournaments = rawTournaments?.slice().sort((a, b) => {
+    const pa = statusPriority(a.status)
+    const pb = statusPriority(b.status)
+    if (pa !== pb) return pa - pb
+    const da = a.tournament_details?.[0]?.start_date ?? ''
+    const db2 = b.tournament_details?.[0]?.start_date ?? ''
+    return da < db2 ? -1 : da > db2 ? 1 : 0
+  }) ?? null
 
   let isTD = false
   if (user) {
