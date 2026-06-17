@@ -7,6 +7,7 @@ type Tournament = {
   status: string
   tournament_details: Array<{
     start_date: string | null
+    end_date: string | null
     singles_fee: number | null
     clubs: { name: string } | null
   }>
@@ -18,15 +19,68 @@ const SIDEBAR_STYLE = {
   borderBottom: '4px solid #C0392B',
 }
 
+function registrationBadge(status: string) {
+  if (status === 'registration_open') {
+    return (
+      <span style={{
+        display: 'inline-block',
+        padding: '3px 10px',
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase' as const,
+        background: '#16a34a',
+        color: '#ffffff',
+      }}>
+        Registration Open
+      </span>
+    )
+  }
+  if (status === 'active' || status === 'completed') {
+    return (
+      <span style={{
+        display: 'inline-block',
+        padding: '3px 10px',
+        borderRadius: 999,
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        textTransform: 'uppercase' as const,
+        background: '#C0392B',
+        color: '#ffffff',
+      }}>
+        Registration Closed
+      </span>
+    )
+  }
+  // setup_pending → Coming Soon
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '3px 10px',
+      borderRadius: 999,
+      fontSize: 10,
+      fontWeight: 700,
+      letterSpacing: '0.08em',
+      textTransform: 'uppercase' as const,
+      background: 'rgba(255,255,255,0.22)',
+      color: '#666666',
+      border: '1px solid rgba(0,0,0,0.15)',
+    }}>
+      Coming Soon
+    </span>
+  )
+}
+
 export default async function TournamentsPage() {
   const supabase = await createClient()
 
   const [{ data: tournaments }, { data: { user } }] = await Promise.all([
     supabase
       .from('tournaments')
-      .select(`id, name, status, tournament_details (start_date, singles_fee, clubs (name))`)
-      .eq('status', 'registration_open')
-      .order('created_at', { ascending: true }),
+      .select(`id, name, status, tournament_details (start_date, end_date, singles_fee, clubs (name))`)
+      .order('created_at', { ascending: false }),
     supabase.auth.getUser(),
   ])
 
@@ -61,6 +115,7 @@ export default async function TournamentsPage() {
         <div className="flex items-center justify-between px-8 py-4"
           style={{ borderBottom: '1px solid rgba(192,57,43,0.25)', backdropFilter: 'blur(12px)' }}>
           <Link href="/tournaments" className="flex flex-col items-start">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/sqshLIFE-logo.png" alt="SQSH.LIFE" className="h-12 w-auto" />
             <p className="text-sm font-bold tracking-[0.22em] uppercase mt-0.5" style={{ color: '#222' }}>
               Tournaments
@@ -94,21 +149,23 @@ export default async function TournamentsPage() {
         <div className="max-w-2xl mx-auto px-8 py-8">
 
           <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'rgba(0,0,0,0.4)' }}>
-            Open &amp; Upcoming
+            All Tournaments
           </p>
           <h2 className="text-2xl font-bold tracking-[0.14em] mb-6" style={{ color: '#111' }}>TOURNAMENTS</h2>
 
           {!tournaments || tournaments.length === 0 ? (
             <div className="rounded-2xl px-6 py-8 text-center"
               style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}>
-              <p className="text-sm" style={{ color: '#666' }}>No open tournaments at this time.</p>
+              <p className="text-sm" style={{ color: '#666' }}>No tournaments found.</p>
             </div>
           ) : (
             <div className="grid gap-4">
               {(tournaments as unknown as Tournament[]).map((t) => {
                 const detail = t.tournament_details?.[0]
+                const isOpen = t.status === 'registration_open'
+                const isClosed = t.status === 'active' || t.status === 'completed'
                 return (
-                  <div key={t.id} className="rounded-2xl p-6 transition hover:opacity-90"
+                  <div key={t.id} className="rounded-2xl p-6"
                     style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}>
                     <div className="flex items-start justify-between gap-4">
                       <Link href={`/tournament/${t.id}`} className="flex-1 min-w-0">
@@ -122,25 +179,34 @@ export default async function TournamentsPage() {
                       </Link>
                       <div className="text-right shrink-0">
                         {detail?.start_date && (
-                          <p className="text-xs" style={{ color: '#666' }}>
+                          <p className="text-xs mb-1" style={{ color: '#666' }}>
                             {new Date(detail.start_date).toLocaleDateString('en-AU', {
                               day: 'numeric', month: 'short', year: 'numeric',
                             })}
                           </p>
                         )}
-                        <span className="inline-block mt-1 text-[10px] font-bold tracking-[0.14em] px-2 py-1 rounded"
-                          style={{ background: 'rgba(34,197,94,0.1)', color: '#16a34a', border: '1px solid rgba(34,197,94,0.2)' }}>
-                          OPEN
-                        </span>
+                        {registrationBadge(t.status)}
                       </div>
                     </div>
-                    <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(192,57,43,0.2)' }}>
-                      <Link href={`/tournament/${t.id}/register`}
-                        className="block w-full text-center py-3 rounded-xl text-sm font-bold tracking-[0.14em] uppercase text-white transition hover:opacity-90"
-                        style={{ background: '#C0392B' }}>
-                        REGISTER →
-                      </Link>
-                    </div>
+
+                    {isOpen && (
+                      <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(192,57,43,0.2)' }}>
+                        <Link href={`/tournament/${t.id}/register`}
+                          className="block w-full text-center py-3 rounded-xl text-sm font-bold tracking-[0.14em] uppercase text-white transition hover:opacity-90"
+                          style={{ background: '#C0392B' }}>
+                          REGISTER →
+                        </Link>
+                      </div>
+                    )}
+
+                    {isClosed && (
+                      <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(192,57,43,0.2)' }}>
+                        <p className="text-center text-xs font-bold tracking-[0.14em] uppercase"
+                          style={{ color: '#888' }}>
+                          Registration Closed — See You Next Year
+                        </p>
+                      </div>
+                    )}
                   </div>
                 )
               })}
