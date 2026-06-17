@@ -1342,16 +1342,17 @@ function ZoomPanBracket({ children }: { children: React.ReactNode }) {
   React.useLayoutEffect(() => {
     if (!outerRef.current || !innerRef.current) return
     const availW = outerRef.current.clientWidth
+    const availH = window.innerHeight * 0.75
     const contentW = innerRef.current.scrollWidth
     const contentH = innerRef.current.scrollHeight
-    if (contentW > availW && contentW > 0) {
-      const initialScale = availW / contentW
+    if (contentW > 0 && contentH > 0) {
+      const initialScale = Math.min(availW / contentW, availH / contentH, 1)
       minScaleRef.current = initialScale
       scaleRef.current = initialScale
+      txRef.current = 0
+      tyRef.current = 0
       applyTransform()
       setContainerH(Math.ceil(contentH * initialScale) + 32)
-    } else {
-      setContainerH(contentH + 32)
     }
   }, [])
 
