@@ -1172,12 +1172,15 @@ function roundLabel(rn: number, maxRound: number): string {
  *  leftCount: cards in the left (source) column
  *  rightCount: cards in the right (dest) column
  *  colH: height of the card area (excludes label)
- *  LABEL_H: height reserved for round label above card area
+ *  leftMatches: matches in the left column (used to check next_match_id)
+ *  matchIds: set of all match IDs in the current draw
  */
-function BracketConnector({ leftCount, rightCount, colH }: {
+function BracketConnector({ leftCount, rightCount, colH, leftMatches, matchIds }: {
   leftCount: number
   rightCount: number
   colH: number
+  leftMatches?: Match[]
+  matchIds?: Set<string>
 }) {
   const W = 20
   const LABEL_H = 22
@@ -1187,6 +1190,14 @@ function BracketConnector({ leftCount, rightCount, colH }: {
   const bigSlotH = colH / bigCount
   const smallSlotH = colH / smallCount
 
+  // Returns true if the match at the given left-column index has a valid next match
+  function hasValidNext(idx: number): boolean {
+    if (!leftMatches || !matchIds) return true
+    const m = leftMatches[idx]
+    if (!m) return false
+    return m.next_match_id != null && matchIds.has(m.next_match_id)
+  }
+
   const lines: string[] = []
 
   if (leftCount >= rightCount) {
@@ -1195,11 +1206,16 @@ function BracketConnector({ leftCount, rightCount, colH }: {
       const y1 = (2 * i + 0.5) * bigSlotH      // left card 2i centre
       const y2 = (2 * i + 1.5) * bigSlotH      // left card 2i+1 centre
       const ym = (i + 0.5) * smallSlotH         // right card i centre
-      lines.push(`M0,${y1} H${W / 2} V${ym} H${W}`)
-      lines.push(`M0,${y2} H${W / 2} V${ym}`)
+      if (hasValidNext(2 * i)) {
+        lines.push(`M0,${y1} H${W / 2} V${ym} H${W}`)
+      }
+      // Only draw y2 if the second card of this pair actually exists in the column
+      if (2 * i + 1 < leftCount && hasValidNext(2 * i + 1)) {
+        lines.push(`M0,${y2} H${W / 2} V${ym}`)
+      }
     }
-    // Odd leftCount: last card has no pair, run straight across
-    if (leftCount % 2 !== 0) {
+    // Odd leftCount: last card has no pair — only draw if it has a valid next match
+    if (leftCount % 2 !== 0 && hasValidNext(leftCount - 1)) {
       const y = (leftCount - 0.5) * bigSlotH
       lines.push(`M0,${y} H${W}`)
     }
@@ -1217,7 +1233,7 @@ function BracketConnector({ leftCount, rightCount, colH }: {
   return (
     <div className="flex flex-col flex-shrink-0">
       <div style={{ height: LABEL_H }} />
-      <svg width={W} height={colH} style={{ display: 'block' }}>
+      <svg width={W} height={colH} style={{ display: 'block', overflow: 'visible' }}>
         {lines.map((d, i) => (
           <path key={i} d={d} stroke="#fa0000" strokeWidth="1.5" fill="none"
             strokeLinecap="round" strokeLinejoin="round" />
@@ -1257,6 +1273,9 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
     rightCols.push({ rn: r, matches: rMatches.slice(half) })
   }
 
+  // Set of all match IDs in this draw — used by BracketConnector to validate next_match_id
+  const matchIdSet = new Set(matches.map(m => m.id))
+
   // Column height: sized for R1 top (largest column) with generous per-card spacing
   const slotH = 116 // px per slot (card ~88px + gap)
   const r1TopCount = leftCols.length > 0 ? leftCols[0].matches.length : 1
@@ -1285,9 +1304,9 @@ function CentrefoldBracket({ matches, maxRound, playerMap, loggedInUserId, onMat
           {renderCol(rn, cm)}
           {/* Connector to next left column or to FINAL */}
           {idx < leftCols.length - 1 ? (
-            <BracketConnector leftCount={cm.length} rightCount={leftCols[idx + 1].matches.length} colH={colH} />
+            <BracketConnector leftCount={cm.length} rightCount={leftCols[idx + 1].matches.length} colH={colH} leftMatches={cm} matchIds={matchIdSet} />
           ) : (
-            <BracketConnector leftCount={cm.length} rightCount={finalMatches.length} colH={colH} />
+            <BracketConnector leftCount={cm.length} rightCount={finalMatches.length} colH={colH} leftMatches={cm} matchIds={matchIdSet} />
           )}
         </React.Fragment>
       ))}

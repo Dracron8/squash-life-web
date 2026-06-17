@@ -26,6 +26,12 @@ type Registration = {
   tournaments: { id: string; name: string; tournament_details: { start_date: string | null }[] } | null
 }
 
+type OpenTournament = {
+  id: string
+  name: string
+  tournament_details: { start_date: string | null }[]
+}
+
 const PAYMENT_MSG: Record<string, { label: string; sub: string; color: string }> = {
   fully_paid:   { label: 'Registered ✓', sub: 'Fully paid',                              color: '#16a34a' },
   deposit_paid: { label: 'Deposit Received', sub: 'Spot guaranteed, balance due at door', color: '#ca8a04' },
@@ -52,6 +58,7 @@ export default function DashboardPage() {
   const [isTD, setIsTD] = useState(false)
   const [upcomingMatches, setUpcomingMatches] = useState<Match[]>([])
   const [registrations, setRegistrations] = useState<Registration[]>([])
+  const [openTournaments, setOpenTournaments] = useState<OpenTournament[]>([])
 
   useEffect(() => {
     const supabase = createClient()
@@ -64,7 +71,7 @@ export default function DashboardPage() {
         .maybeSingle()
       setIsTD(profile?.user_role === 'td' || profile?.user_role === 'both')
 
-      const [{ data: p }, { data: m }, { data: r }] = await Promise.all([
+      const [{ data: p }, { data: m }, { data: r }, { data: allOpen }] = await Promise.all([
         supabase
           .from('players')
           .select('first_name, last_name, usr_rating')
@@ -86,11 +93,23 @@ export default function DashboardPage() {
           .eq('user_id', userId)
           .order('created_at', { ascending: false })
           .limit(10),
+
+        supabase
+          .from('tournaments')
+          .select('id, name, tournament_details(start_date)')
+          .eq('status', 'registration_open')
+          .order('created_at', { ascending: false }),
       ])
+
+      const regs = (r as unknown as Registration[]) ?? []
+      const registeredIds = new Set(regs.map(reg => reg.tournaments?.id).filter(Boolean))
+      const filteredOpen = ((allOpen as unknown as OpenTournament[]) ?? [])
+        .filter(t => !registeredIds.has(t.id))
 
       setPlayer(p ?? null)
       setUpcomingMatches((m as unknown as Match[]) ?? [])
-      setRegistrations((r as unknown as Registration[]) ?? [])
+      setRegistrations(regs)
+      setOpenTournaments(filteredOpen)
     }
 
     async function init() {
@@ -271,7 +290,7 @@ export default function DashboardPage() {
           </div>
 
           {/* My Tournaments */}
-          <div className="mb-8">
+          <div className="mb-5">
             <h2 className="text-[10px] font-bold tracking-[0.14em] uppercase mb-3" style={{ color: '#222' }}>
               My Tournaments
             </h2>
@@ -333,6 +352,44 @@ export default function DashboardPage() {
               </div>
             )}
           </div>
+
+          {/* Open Tournaments */}
+          {openTournaments.length > 0 && (
+            <div className="mb-8">
+              <h2 className="text-[10px] font-bold tracking-[0.14em] uppercase mb-3" style={{ color: '#222' }}>
+                Open Tournaments
+              </h2>
+              <div className="grid gap-3">
+                {openTournaments.map((t) => (
+                  <Link
+                    key={t.id}
+                    href={`/tournament/${t.id}`}
+                    className="block rounded-2xl p-5 transition hover:opacity-80"
+                    style={{ background: 'rgba(255,255,255,0.18)', backdropFilter: 'blur(12px)', border: '1.5px solid rgba(192,57,43,0.3)' }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-semibold text-sm tracking-[0.14em]" style={{ color: '#111' }}>{t.name}</p>
+                        {t.tournament_details?.[0]?.start_date && (
+                          <p className="text-xs mt-1" style={{ color: '#666' }}>
+                            {new Date(t.tournament_details[0].start_date).toLocaleDateString('en-AU', {
+                              day: 'numeric', month: 'long', year: 'numeric',
+                            })}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className="shrink-0 text-[10px] font-bold tracking-[0.14em] px-3 py-1 rounded-full"
+                        style={{ background: 'rgba(192,57,43,0.12)', color: '#C0392B', border: '1px solid rgba(192,57,43,0.3)' }}
+                      >
+                        REGISTER →
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
 
         </div>
       </div>

@@ -434,6 +434,58 @@ export default function NewTournamentPage() {
     }
   }
 
+  // ── Save & Open Registration (Step 5, new tournament only) ──────────────
+  async function saveAndOpenRegistration() {
+    const err = validate()
+    if (err) { setError(err); return }
+    setError(null)
+    setSaving(true)
+    try {
+      const supabase = createClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) { router.push('/login'); return }
+
+      const { data: newTournament, error: tErr } = await supabase
+        .from('tournaments')
+        .insert({
+          td_id: user.id,
+          name: form.name.trim(),
+          status: 'registration_open',
+          draw_type: form.draw_type,
+          court_entry_code: '1234',
+        })
+        .select('id')
+        .single()
+
+      if (tErr || !newTournament)
+        throw tErr ?? new Error('Failed to create tournament.')
+
+      const { error: dErr } = await supabase
+        .from('tournament_details')
+        .insert(
+          buildTournamentDetailsPayload(newTournament.id, form._club_id ?? null, form),
+        )
+      if (dErr) throw dErr
+
+      await supabase.from('profiles').upsert({
+        id: user.id,
+        club_name: form.venue_name.trim(),
+        club_city: form.venue_city.trim(),
+        club_province: form.venue_province.trim(),
+        club_country: form.venue_country.trim(),
+      }, { onConflict: 'id' })
+
+      localStorage.removeItem(LS_KEY)
+      localStorage.removeItem(LS_STEP_KEY)
+
+      router.push(`/td/tournaments/${newTournament.id}?created=1`)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Something went wrong.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   // ── Cancel / Discard (with confirm) ─────────────────────────────────────
   function discard() {
     const msg = isEdit
@@ -1652,14 +1704,36 @@ export default function NewTournamentPage() {
             {saving ? 'SAVING...' : 'SAVE CLUB & CONTINUE'}
           </button>
         ) : step === 5 ? (
-          <button
-            type="button"
-            onClick={saveTournament}
-            disabled={saving || loadingEdit}
-            className="flex-1 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold tracking-widest py-3.5 rounded-xl transition"
-          >
-            {saving ? (isEdit ? 'UPDATING...' : 'CREATING...') : (isEdit ? 'UPDATE TOURNAMENT' : 'CREATE TOURNAMENT')}
-          </button>
+          isEdit ? (
+            <button
+              type="button"
+              onClick={saveTournament}
+              disabled={saving || loadingEdit}
+              className="flex-1 bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold tracking-widest py-3.5 rounded-xl transition"
+            >
+              {saving ? 'UPDATING...' : 'UPDATE TOURNAMENT'}
+            </button>
+          ) : (
+            <div className="flex-1 flex flex-col gap-3">
+              <button
+                type="button"
+                onClick={saveAndOpenRegistration}
+                disabled={saving || loadingEdit}
+                className="w-full bg-red-700 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold tracking-widest py-3.5 rounded-xl transition"
+              >
+                {saving ? 'CREATING...' : 'CREATE & OPEN REGISTRATION'}
+              </button>
+              <button
+                type="button"
+                onClick={saveTournament}
+                disabled={saving || loadingEdit}
+                className="w-full disabled:opacity-50 text-sm font-bold tracking-widest py-3.5 rounded-xl transition"
+                style={{ border: '1.5px solid rgba(192,57,43,0.5)', color: '#C0392B', background: 'transparent' }}
+              >
+                {saving ? 'CREATING...' : 'SAVE AS DRAFT'}
+              </button>
+            </div>
+          )
         ) : (
           <button
             type="button"
