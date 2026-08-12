@@ -1,0 +1,40 @@
+name: Keep Supabase warm
+
+# Free-plan Supabase projects auto-pause after ~7 days of inactivity. A paused
+# project answers every request with a gateway 502, which looks exactly like a
+# network block. This workflow pings the REST layer on a schedule so the project
+# never idles out. Swap to Supabase Pro (no auto-pause) and delete this at launch.
+#
+# NOTE: GitHub only runs `schedule` triggers from the repository's DEFAULT branch.
+# The cron below starts firing once this file is merged to main. The `push`
+# trigger runs it immediately on any change to this file (a self-test), and
+# `workflow_dispatch` lets you run it by hand from the Actions tab.
+
+on:
+  schedule:
+    - cron: '0 12 */3 * *'   # every ~3 days at 12:00 UTC — comfortably under the 7-day pause window
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/keep-supabase-warm.yml'
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST (touches Postgres — this is what resets the pause timer)
+        env:
+          # Public anon key — the same one shipped to browsers and committed in
+          # next.config.ts. It is RLS-protected and safe to expose; this is not a secret.
+          SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxiZmZuaHh3dmt6b2dzeXd5ZGNkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwMTUwNzAsImV4cCI6MjA5MDU5MTA3MH0.-hoHsi0jUdz7dHjOylaRsrKUZBS2YWAbj0DmVOnae1o
+        run: |
+          set -euo pipefail
+          URL="https://lbffnhxwvkzogsywydcd.supabase.co/rest/v1/tournaments?select=id&limit=1"
+          CODE=$(curl -sS -m 20 -o /tmp/resp.json -w '%{http_code}' "$URL" -H "apikey: ${SUPABASE_ANON_KEY}")
+          echo "HTTP $CODE"
+          echo "Response:"; cat /tmp/resp.json; echo
+          if [ "$CODE" != "200" ]; then
+            echo "::error::Supabase ping failed with HTTP $CODE (project paused, or auth/network issue)"
+            exit 1
+          fi
+          echo "::notice::Supabase is warm (HTTP 200)."
