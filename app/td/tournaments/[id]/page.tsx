@@ -270,11 +270,13 @@ export default function TournamentPage() {
     setLoading(false)
   }, [id, router])
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect -- fetchAll loads data and sets state on mount; intended
   useEffect(() => { fetchAll() }, [fetchAll])
 
   // Show success banner and clean URL after creation / update redirect
   useEffect(() => {
     if (searchParams.get('created') === '1') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-shot banner + URL cleanup from a redirect param
       setShowCreatedBanner(true)
       router.replace(`/td/tournaments/${id}`)
     }
@@ -295,6 +297,7 @@ export default function TournamentPage() {
   const divs = divisions()
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- sets the default active division once options exist
     if (divs.length > 0 && !activeDivision) setActiveDivision(divs[0])
   })
 

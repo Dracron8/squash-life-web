@@ -163,6 +163,7 @@ export default async function TournamentPage({ params }: Props) {
 
   const deadline = detail?.registration_deadline ? new Date(detail.registration_deadline) : null
   const daysUntilDeadline = deadline
+    // eslint-disable-next-line react-hooks/purity -- server component: request-time snapshot of "now" for the deadline badge is intended
     ? Math.ceil((deadline.getTime() - Date.now()) / 86400000)
     : null
   const deadlineUrgent = daysUntilDeadline !== null && daysUntilDeadline <= 7 && daysUntilDeadline >= 0

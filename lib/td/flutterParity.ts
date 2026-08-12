@@ -351,9 +351,9 @@ export function reconstructDaySchedules(
  * and the UI produce consistent results.
  */
 export function loadWizardFormFromDb(
-  tournament: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-  detail: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-  club: Record<string, any> | null, // eslint-disable-line @typescript-eslint/no-explicit-any
+  tournament: Record<string, any>,  
+  detail: Record<string, any>,  
+  club: Record<string, any> | null,  
 ): Partial<WizardForm> {
   if (!detail) return {}
 
@@ -482,8 +482,8 @@ function addMinutes(time: string, mins: number): string {
 }
 
 export function generateBasicSchedule(
-  detail: Record<string, any>, // eslint-disable-line @typescript-eslint/no-explicit-any
-  registrations: Record<string, any>[] = [], // eslint-disable-line @typescript-eslint/no-explicit-any
+  detail: Record<string, any>,  
+  registrations: Record<string, any>[] = [],  
 ): ScheduleSlot[] {
   const slots: ScheduleSlot[] = [];
   const numCourts = Number(detail.courts_available) || Number(detail.num_courts) || 4;
