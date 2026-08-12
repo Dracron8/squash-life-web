@@ -53,6 +53,16 @@ pre-installed Chromium). Findings:
   {"error_code":"invalid_credentials","msg":"Invalid login credentials"} =
   auth correctly wired and reachable.
 - Dev-server log: zero runtime errors during the run.
+### 2026-08-12 — Keep-warm GitHub Action runs green on GitHub's infra
+Proof: added .github/workflows/keep-supabase-warm.yml (cron '0 12 */3 * *' +
+workflow_dispatch + push-on-self). Pushed to the feature branch; the push
+trigger fired run #1 (id 31650710854) on an ubuntu-24.04 runner ->
+conclusion: success in ~7s. Job log shows `HTTP 200` and
+`[{"id":"ffa22ca0-2dc1-4ced-82ac-f204626b06c3"}]` then
+`::notice::Supabase is warm (HTTP 200)`. This is independent of the Claude
+session — it ran on GitHub's runner. NOTE: `schedule` triggers only fire from
+the DEFAULT branch, so the every-3-days cron begins once this file is on main.
+
 Caveat (NOT an app bug): the headless test browser has no direct internet
 route and wasn't proxied, so its in-browser fetches to *.supabase.co showed
 ERR_CONNECTION_RESET / the login button stuck at "SIGNING IN…". A real user's

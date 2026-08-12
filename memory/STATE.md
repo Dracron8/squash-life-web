@@ -15,6 +15,9 @@ A working Next.js 16 + Supabase squash-tournament web app. In the codebase:
 - Next.js 16.2.6, React 19.2, Tailwind 4, TypeScript; @supabase/ssr
 - Supabase project ref lbffnhxwvkzogsywydcd (region us-east-2), STATUS: Healthy
 - Branches: main (default) + this run's claude/supabase-network-verify-urhmz0
+- .github/workflows/keep-supabase-warm.yml: pings REST every ~3 days to stop
+  the Free-plan project auto-pausing. Tested green on GitHub's runner. The cron
+  only fires from the DEFAULT branch, so it activates once merged to main.
 
 ## NEXT TASK
 [Awaiting Tom's direction for SqshLife.] Runtime is now proven end-to-end, so
