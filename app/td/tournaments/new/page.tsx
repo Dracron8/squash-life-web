@@ -266,13 +266,14 @@ export default function NewTournamentPage() {
         }))
       }
     })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+   
   }, [editId])
 
   // Load existing tournament for edit mode (from list or detail "EDIT SETUP")
   useEffect(() => {
     const eid = editId
     if (!eid) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- resets edit-mode state when there is no edit target
       setIsEdit(false)
       setEditingId(null)
       return
@@ -293,11 +294,13 @@ export default function NewTournamentPage() {
           .single()
 
         if (tErr || !t) throw tErr ?? new Error('Tournament not found.')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase nested select returns a loosely-typed row
         if ((t as any).td_id !== user.id) {
           router.push('/td')
           return
         }
 
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- Supabase nested select returns a loosely-typed row
         const tdetsArr = (t as any).tournament_details
         const tdets = Array.isArray(tdetsArr) ? tdetsArr[0] : tdetsArr
         const clb = tdets?.clubs || null
@@ -535,6 +538,7 @@ export default function NewTournamentPage() {
         // 3. Update tournament_details using the exact same payload builder
         const fullPayload = buildTournamentDetailsPayload(editingId, form._club_id ?? null, form)
         // Strip row-identifying fields that are not updatable via this payload
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any -- payload is a dynamic column map; stripping non-updatable fields
         const { tournament_id, club_id: _cid, ...detailUpdate } = fullPayload as any
         const { error: dErr } = await supabase
           .from('tournament_details')

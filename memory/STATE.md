@@ -22,10 +22,13 @@ A working Next.js 16 + Supabase squash-tournament web app. In the codebase:
 Nothing.
 
 ## VERIFIED THIS RUN
-- `npm install && npm run build` -> exit 0 (12/12 pages, all routes). The app
-  builds clean. See VERIFIED.md.
+- `npm run build` -> exit 0 (12/12 pages, all routes). App builds clean.
+- `npm run lint` -> 0 errors (was 9; fixed). 15 no-img-element warnings remain.
+  See VERIFIED.md.
 
 ## UNVERIFIED / GAPS
-- `npm run lint` not yet run.
-- Runtime not tested against Supabase (backend was paused; needs unpause to
-  test login/data flows end-to-end).
+- Runtime NOT tested against Supabase. This session's network cannot reach
+  *.supabase.co / *.vercel.app (403 at the proxy allowlist), so login/data
+  flows are unverified. To test end-to-end here, widen the environment
+  network policy (Custom allowlist: *.supabase.co, *.vercel.app).
+- 15 no-img-element warnings (use next/image) left as-is — cosmetic/perf.

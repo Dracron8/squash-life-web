@@ -7,6 +7,7 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     const saved = (localStorage.getItem('theme') as 'dark' | 'light') || 'light'
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time theme read on mount; kept in an effect to avoid an SSR/hydration mismatch
     setTheme(saved)
     document.documentElement.setAttribute('data-theme', saved)
   }, [])
