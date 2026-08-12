@@ -21,7 +21,11 @@ A working Next.js 16 + Supabase squash-tournament web app. In the codebase:
 ## BLOCKED ON
 Nothing.
 
+## VERIFIED THIS RUN
+- `npm install && npm run build` -> exit 0 (12/12 pages, all routes). The app
+  builds clean. See VERIFIED.md.
+
 ## UNVERIFIED / GAPS
-- Brain just installed; nothing proven for this repo yet. NOT YET VERIFIED:
-  does `npm run build` pass? does `npm run lint` pass? Run and record in
-  VERIFIED.md before claiming the app is healthy.
+- `npm run lint` not yet run.
+- Runtime not tested against Supabase (backend was paused; needs unpause to
+  test login/data flows end-to-end).
